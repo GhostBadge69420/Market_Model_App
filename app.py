@@ -2733,11 +2733,6 @@ overview_tab, factors_tab, models_tab, indicators_tab = st.tabs(
 )
 
 with overview_tab:
-    render_tab_3d_hero(
-        "Overview Deck",
-        "Market Command Surface",
-        "A raised cockpit for the live read: compact controls, quick context, and top-level market signals in one 3D-styled layer.",
-    )
     st.markdown('<div class="ui-section-kicker">Workspace</div><div class="ui-section-title">Control Panel</div>', unsafe_allow_html=True)
     render_compact_control_panel(
         [
@@ -2795,11 +2790,6 @@ with overview_tab:
             st.info("No market news available for this asset right now")
 
 with factors_tab:
-    render_tab_3d_hero(
-        "Factors Deck",
-        "Cross-Signal Matrix",
-        "Correlation, sentiment, macro drivers, and volatility are staged like floating analysis surfaces for a deeper factor read.",
-    )
     st.markdown('<div class="ui-section-kicker">Cross Signals</div><div class="ui-section-title">Correlation Map</div>', unsafe_allow_html=True)
     heatmap_fig, ax = plt.subplots(figsize=(7.5, 5.2))
     sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", ax=ax)
@@ -2831,11 +2821,6 @@ with factors_tab:
         st.line_chart(data["BB_Width"])
 
 with models_tab:
-    render_tab_3d_hero(
-        "Models Deck",
-        "Forecast Lab",
-        "Model diagnostics and out-of-sample comparison now sit inside a more dimensional lab-style panel so the evaluation layer feels distinct.",
-    )
     st.markdown('<div class="ui-section-kicker">Forecast Engine</div><div class="ui-section-title">Model Comparison</div>', unsafe_allow_html=True)
     results = get_cached_model_results(asset_key, data_source, selected_year)
     if "Error" in results:
@@ -2925,11 +2910,6 @@ with models_tab:
                 st.dataframe(asset_summary, width="stretch", hide_index=True)
 
 with indicators_tab:
-    render_tab_3d_hero(
-        "Indicators Deck",
-        "Signal Stack",
-        "Momentum, oscillators, trend overlays, and price-action reads are presented as stacked technical modules with a subtle 3D lift.",
-    )
     ind_left, ind_right = st.columns(2)
     with ind_left:
         st.subheader("📈 RSI")
