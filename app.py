@@ -25,8 +25,7 @@ if BACKEND_PATH not in sys.path:
 from api.ml.ml_models import compare_models, compare_history_models, forecast_period_returns
 from api.ml.news import get_news
 from api.ml.research_context import RESEARCH_CONTEXT
-from api.ml.sentiment import sentiment_breakdown
-from api.sentiment.pipeline import get_news_sentiment
+from api.ml.sentiment import sentiment_breakdown, sentiment_score as compute_news_sentiment_score
 
 def _resolve_optional_path(secret_name, default_path):
     configured_path = st.secrets.get(secret_name) or os.getenv(secret_name)
@@ -2216,8 +2215,14 @@ def fetch_news(symbol):
 
 
 @st.cache_data(ttl=90)
+def get_cached_news_payload(symbol):
+    return fetch_news(symbol)
+
+
+@st.cache_data(ttl=90)
 def get_cached_sentiment(symbol):
-    return get_news_sentiment(symbol)
+    news_items = get_cached_news_payload(symbol).get("news", [])
+    return compute_news_sentiment_score(news_items)
 
 
 @st.cache_data(ttl=900)
@@ -3260,8 +3265,7 @@ with overview_tab:
         )
     else:
         st.markdown('<div class="ui-section-kicker">News</div><div class="ui-section-title">News Flow</div>', unsafe_allow_html=True)
-        news_data = {"news": []}
-        news_data = fetch_news(symbol)
+        news_data = get_cached_news_payload(symbol)
         news_list = news_data.get("news", [])
         if news_list:
             for n in news_list:
