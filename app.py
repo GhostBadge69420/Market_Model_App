@@ -1378,6 +1378,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .control-panel-card {
     min-width: 0;
     padding: 0.72rem 0.78rem;
+    margin-bottom: 0.7rem;
     border-radius: 16px;
     background:
         linear-gradient(160deg, rgba(5, 20, 15, 0.90), rgba(5, 14, 12, 0.76)),
@@ -1398,7 +1399,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 .control-panel-value {
     font-family: "Space Grotesk", sans-serif;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     line-height: 1.2;
     color: var(--terminal-text);
     white-space: nowrap;
@@ -1416,6 +1417,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .comparison-summary-card {
     min-width: 0;
     padding: 0.82rem 0.9rem;
+    margin-bottom: 0.7rem;
     border-radius: 18px;
     background:
         linear-gradient(160deg, rgba(5, 20, 15, 0.90), rgba(5, 14, 12, 0.76)),
@@ -1436,12 +1438,11 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 .comparison-summary-value {
     font-family: "Space Grotesk", sans-serif;
-    font-size: 1.02rem;
+    font-size: 0.92rem;
     line-height: 1.2;
     color: var(--terminal-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .tab-3d-hero {
@@ -2589,39 +2590,39 @@ def render_historical_terminal_header_metrics(metrics):
 
 
 def render_compact_control_panel(items):
-    cards = []
-    for label, value in items:
-        cards.append(
-            f"""
-            <div class="control-panel-card">
-                <div class="control-panel-label">{escape(str(label))}</div>
-                <div class="control-panel-value" title="{escape(str(value))}">{escape(str(value))}</div>
-            </div>
-            """
-        )
+    first_row = items[:3]
+    second_row = items[3:6]
 
-    st.markdown(
-        f'<div class="control-panel-grid">{"".join(cards)}</div>',
-        unsafe_allow_html=True,
-    )
+    for row_items in [first_row, second_row]:
+        if not row_items:
+            continue
+        columns = st.columns(len(row_items))
+        for column, (label, value) in zip(columns, row_items):
+            with column:
+                st.markdown(
+                    f"""
+                    <div class="control-panel-card">
+                        <div class="control-panel-label">{escape(str(label))}</div>
+                        <div class="control-panel-value" title="{escape(str(value))}">{escape(str(value))}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
 
 def render_comparison_summary(items):
-    cards = []
-    for label, value in items:
-        cards.append(
-            f"""
-            <div class="comparison-summary-card">
-                <div class="comparison-summary-label">{escape(str(label))}</div>
-                <div class="comparison-summary-value" title="{escape(str(value))}">{escape(str(value))}</div>
-            </div>
-            """
-        )
-
-    st.markdown(
-        f'<div class="comparison-summary-grid">{"".join(cards)}</div>',
-        unsafe_allow_html=True,
-    )
+    columns = st.columns(len(items))
+    for column, (label, value) in zip(columns, items):
+        with column:
+            st.markdown(
+                f"""
+                <div class="comparison-summary-card">
+                    <div class="comparison-summary-label">{escape(str(label))}</div>
+                    <div class="comparison-summary-value" title="{escape(str(value))}">{escape(str(value))}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 def render_tab_3d_hero(kicker, title, copy):
