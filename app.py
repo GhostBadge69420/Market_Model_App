@@ -508,13 +508,13 @@ def render_three_market_scene(asset_name, year_label, trend_label):
     components.html(
         f"""
         <div id="r3f-root" style="width:100%;height:500px;border-radius:26px;overflow:hidden;position:relative;background:
-        radial-gradient(circle at 18% 18%, rgba(69,211,255,.22), transparent 28%),
-        radial-gradient(circle at 82% 16%, rgba(255,177,92,.16), transparent 24%),
-        linear-gradient(135deg, #06131c 0%, #0b0b14 52%, #16111f 100%);">
+        radial-gradient(circle at 18% 18%, rgba(16,255,163,.18), transparent 28%),
+        radial-gradient(circle at 82% 16%, rgba(52,211,153,.12), transparent 24%),
+        linear-gradient(135deg, #020706 0%, #03110d 52%, #061917 100%);">
           <canvas id="market-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;"></canvas>
           <div style="position:absolute;inset:0;z-index:1;background:
-            linear-gradient(180deg, rgba(6,19,28,0.14) 0%, rgba(6,19,28,0.54) 100%),
-            radial-gradient(circle at top left, rgba(56, 189, 248, 0.10), transparent 32%);"></div>
+            linear-gradient(180deg, rgba(2,12,10,0.06) 0%, rgba(2,12,10,0.32) 100%),
+            radial-gradient(circle at top left, rgba(16, 255, 163, 0.08), transparent 32%);"></div>
           <div id="hero-overlay" style="position:absolute;left:22px;right:22px;top:18px;z-index:3;"></div>
         </div>
 
@@ -530,21 +530,11 @@ def render_three_market_scene(asset_name, year_label, trend_label):
           let pulseIndex = 0;
 
           overlayNode.innerHTML = `
-            <div style="color:#f7fafc;font-family:'Space Grotesk',Arial,sans-serif;">
-              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(134,239,255,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">3D Canvas Engine</span>
-                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(196,181,253,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Motion Overlay</span>
-                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(251,191,36,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Collision Field</span>
-                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(74,222,128,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Market Dashboard</span>
-              </div>
-              <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.72;">3D Market Dashboard</div>
-              <div style="font-size:30px;font-weight:700;margin-top:8px;line-height:1;">{asset_name}</div>
-              <div style="font-size:13px;opacity:.84;margin-top:7px;">{year_label} • {trend_label}</div>
-              <div style="margin-top:14px;max-width:460px;font-size:13px;line-height:1.5;color:rgba(241,245,249,.82);">
-                Compact highlights, animated depth, and physics-driven motion tuned for a sharper market terminal feel.
-              </div>
-              <div id="pulse-chip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 11px;background:rgba(7,17,26,.62);border:1px solid rgba(125,211,252,.22);font-size:12px;color:rgba(226,232,240,.92);">
-                <span style="width:8px;height:8px;border-radius:999px;background:#4ade80;box-shadow:0 0 12px rgba(74,222,128,.6);"></span>
+            <div style="color:#dcfce7;font-family:'Space Grotesk',Arial,sans-serif;">
+              <div style="font-size:30px;font-weight:700;margin-top:8px;line-height:1;text-shadow:0 0 18px rgba(16,255,163,.24);">{asset_name}</div>
+              <div style="font-size:13px;opacity:.88;margin-top:8px;color:rgba(187,247,208,.92);letter-spacing:.08em;text-transform:uppercase;">{year_label} • {trend_label}</div>
+              <div id="pulse-chip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 11px;background:rgba(3,18,14,.58);border:1px solid rgba(52,211,153,.22);font-size:12px;color:rgba(220,252,231,.92);">
+                <span style="width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 12px rgba(34,197,94,.75);"></span>
                 <span id="pulse-label">${{pulses[0]}}</span>
               </div>
             </div>
@@ -601,16 +591,22 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             ctx.clearRect(0, 0, width, height);
 
             const bg = ctx.createLinearGradient(0, 0, 0, height);
-            bg.addColorStop(0, "rgba(5, 18, 28, 0.22)");
-            bg.addColorStop(1, "rgba(5, 10, 18, 0.02)");
+            bg.addColorStop(0, "rgba(0, 18, 12, 0.24)");
+            bg.addColorStop(1, "rgba(0, 8, 6, 0.04)");
             ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, width, height);
+
+            const haze = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.38);
+            haze.addColorStop(0, "rgba(16, 255, 163, 0.12)");
+            haze.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = haze;
             ctx.fillRect(0, 0, width, height);
 
             for (const particle of state.particles) {{
               particle.angle += particle.speed * 18;
               const px = centerX + Math.cos(particle.angle) * particle.radius;
               const py = centerY + Math.sin(particle.angle * 1.15) * 52 + particle.y;
-              ctx.fillStyle = "rgba(253, 230, 138, 0.42)";
+              ctx.fillStyle = "rgba(110, 231, 183, 0.38)";
               ctx.beginPath();
               ctx.arc(px, py % height, particle.size, 0, Math.PI * 2);
               ctx.fill();
@@ -619,12 +615,15 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             ctx.save();
             ctx.translate(centerX, centerY);
             ctx.rotate(0.95 + Math.sin(t * 0.55) * 0.06);
-            ctx.strokeStyle = "rgba(103, 232, 249, 0.55)";
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "rgba(16,255,163,.35)";
+            ctx.strokeStyle = "rgba(16, 255, 163, 0.62)";
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.ellipse(0, 0, 126, 62, 0, 0, Math.PI * 2);
             ctx.stroke();
-            ctx.strokeStyle = "rgba(248, 250, 252, 0.32)";
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "rgba(187, 247, 208, 0.22)";
             ctx.lineWidth = 1.2;
             ctx.beginPath();
             ctx.ellipse(0, 0, 150, 74, 0, 0, Math.PI * 2);
@@ -635,11 +634,14 @@ def render_three_market_scene(asset_name, year_label, trend_label):
               const barHeight = 60 + Math.sin(t * 1.8 + bar.phase) * 34 + bar.base * 48;
               const x = width * 0.5 + (bar.x - 290);
               const y = floorY - barHeight;
-              ctx.fillStyle = `${{bar.color}}cc`;
+              const neonBar = ctx.createLinearGradient(x, y, x, floorY);
+              neonBar.addColorStop(0, "rgba(110, 231, 183, 0.98)");
+              neonBar.addColorStop(1, "rgba(16, 185, 129, 0.62)");
+              ctx.fillStyle = neonBar;
               ctx.fillRect(x, y, bar.width, barHeight);
-              ctx.fillStyle = "rgba(255,255,255,0.18)";
+              ctx.fillStyle = "rgba(220,252,231,0.24)";
               ctx.fillRect(x, y, bar.width, 6);
-              ctx.fillStyle = "rgba(8, 20, 32, 0.44)";
+              ctx.fillStyle = "rgba(0, 24, 17, 0.46)";
               ctx.beginPath();
               ctx.moveTo(x + bar.width, y);
               ctx.lineTo(x + bar.width + 10, y - 8);
@@ -649,7 +651,7 @@ def render_three_market_scene(asset_name, year_label, trend_label):
               ctx.fill();
             }}
 
-            ctx.strokeStyle = "rgba(70, 215, 255, 0.18)";
+            ctx.strokeStyle = "rgba(16, 255, 163, 0.16)";
             ctx.lineWidth = 1;
             for (let i = 0; i < 9; i += 1) {{
               const gy = floorY - i * 24;
@@ -673,27 +675,27 @@ def render_three_market_scene(asset_name, year_label, trend_label):
               }}
 
               const glow = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, orb.radius * 2.7);
-              glow.addColorStop(0, `${{orb.color}}ee`);
+              glow.addColorStop(0, "rgba(16,255,163,0.9)");
               glow.addColorStop(1, "rgba(0,0,0,0)");
               ctx.fillStyle = glow;
               ctx.beginPath();
               ctx.arc(orb.x, orb.y, orb.radius * 2.7, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = orb.color;
+              ctx.fillStyle = "rgba(110, 231, 183, 0.96)";
               ctx.beginPath();
               ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = "rgba(255,255,255,0.32)";
+              ctx.fillStyle = "rgba(220,252,231,0.32)";
               ctx.beginPath();
               ctx.arc(orb.x - orb.radius * 0.25, orb.y - orb.radius * 0.25, orb.radius * 0.3, 0, Math.PI * 2);
               ctx.fill();
             }}
 
             const horizon = ctx.createLinearGradient(0, floorY - 18, 0, floorY + 42);
-            horizon.addColorStop(0, "rgba(103, 232, 249, 0.08)");
-            horizon.addColorStop(1, "rgba(8, 16, 28, 0)");
+            horizon.addColorStop(0, "rgba(16, 255, 163, 0.10)");
+            horizon.addColorStop(1, "rgba(0, 14, 10, 0)");
             ctx.fillStyle = horizon;
             ctx.fillRect(width * 0.36, floorY - 18, width * 0.6, 60);
 
