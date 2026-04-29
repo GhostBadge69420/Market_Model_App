@@ -507,7 +507,7 @@ def render_three_market_scene(asset_name, year_label, trend_label):
 
     components.html(
         f"""
-        <div id="r3f-root" style="width:100%;height:500px;border-radius:26px;overflow:hidden;position:relative;background:
+        <div id="r3f-root" style="width:100%;height:min(500px, 62vh);min-height:320px;border-radius:26px;overflow:hidden;position:relative;background:
         radial-gradient(circle at 18% 18%, rgba(16,255,163,.18), transparent 28%),
         radial-gradient(circle at 82% 16%, rgba(52,211,153,.12), transparent 24%),
         linear-gradient(135deg, #020706 0%, #03110d 52%, #061917 100%);">
@@ -521,19 +521,27 @@ def render_three_market_scene(asset_name, year_label, trend_label):
         <script>
           const overlayNode = document.getElementById("hero-overlay");
           const canvas = document.getElementById("market-canvas");
+          const ctx = canvas.getContext("2d");
+          const isMobile = window.matchMedia("(max-width: 900px)").matches;
+          const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          const particleCount = isMobile ? 24 : 48;
+          const orbCount = isMobile ? 4 : 7;
+          const barCount = isMobile ? 10 : 14;
+          const maxDpr = isMobile ? 1.25 : 2;
+          const frameInterval = prefersReducedMotion ? 1000 / 18 : isMobile ? 1000 / 30 : 1000 / 60;
           const pulses = [
             "Scanning live motion field",
             "Balancing collision particles",
             "Refreshing dashboard energy"
           ];
           let pulseIndex = 0;
-          const prefersStaticScene = window.matchMedia("(max-width: 900px), (prefers-reduced-motion: reduce)").matches;
+          let lastFrame = 0;
 
           overlayNode.innerHTML = `
             <div style="color:#dcfce7;font-family:'Space Grotesk',Arial,sans-serif;">
-              <div style="font-size:30px;font-weight:700;margin-top:8px;line-height:1;text-shadow:0 0 18px rgba(16,255,163,.24);">{asset_name}</div>
-              <div style="font-size:13px;opacity:.88;margin-top:8px;color:rgba(187,247,208,.92);letter-spacing:.08em;text-transform:uppercase;">{year_label} • {trend_label}</div>
-              <div id="pulse-chip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 11px;background:rgba(3,18,14,.58);border:1px solid rgba(52,211,153,.22);font-size:12px;color:rgba(220,252,231,.92);">
+              <div style="font-size:${{isMobile ? 22 : 30}}px;font-weight:700;margin-top:8px;line-height:1;text-shadow:0 0 18px rgba(16,255,163,.24);">{asset_name}</div>
+              <div style="font-size:${{isMobile ? 11 : 13}}px;opacity:.88;margin-top:8px;color:rgba(187,247,208,.92);letter-spacing:.08em;text-transform:uppercase;">{year_label} • {trend_label}</div>
+              <div id="pulse-chip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:${{isMobile ? "6px 10px" : "7px 11px"}};background:rgba(3,18,14,.58);border:1px solid rgba(52,211,153,.22);font-size:${{isMobile ? 11 : 12}}px;color:rgba(220,252,231,.92);">
                 <span style="width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 12px rgba(34,197,94,.75);"></span>
                 <span id="pulse-label">${{pulses[0]}}</span>
               </div>
@@ -546,66 +554,66 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             if (pulseLabel) pulseLabel.textContent = pulses[pulseIndex];
           }}, 1800);
 
-          if (prefersStaticScene) {{
-            canvas.remove();
-          }} else {{
-            const ctx = canvas.getContext("2d");
+          const state = {{
+            bars: Array.from({{ length: barCount }}, (_, i) => ({{
+              x: 80 + i * 34,
+              width: 18,
+              base: 0.8 + (i % 5) * 0.12,
+              phase: i * 0.45,
+              color: i % 2 === 0 ? "#46d7ff" : "#ff7ac6"
+            }})),
+            orbs: Array.from({{ length: orbCount }}, (_, i) => ({{
+              x: 180 + i * 44,
+              y: 120 + (i % 3) * 28,
+              z: 0.5 + (i % 4) * 0.18,
+              vx: (Math.random() - 0.5) * 1.7,
+              vy: 0.8 + Math.random() * 1.1,
+              radius: 10 + (i % 3) * 4,
+              color: ["#7dd3fc", "#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#67e8f9"][i]
+            }})),
+            particles: Array.from({{ length: particleCount }}, () => ({{
+              angle: Math.random() * Math.PI * 2,
+              radius: 120 + Math.random() * 180,
+              speed: 0.0015 + Math.random() * 0.0025,
+              y: -40 + Math.random() * 220,
+              size: 1 + Math.random() * 2.5
+            }}))
+          }};
 
-            const state = {{
-              bars: Array.from({{ length: 14 }}, (_, i) => ({{
-                x: 80 + i * 34,
-                width: 18,
-                base: 0.8 + (i % 5) * 0.12,
-                phase: i * 0.45,
-                color: i % 2 === 0 ? "#46d7ff" : "#ff7ac6"
-              }})),
-              orbs: Array.from({{ length: 7 }}, (_, i) => ({{
-                x: 180 + i * 44,
-                y: 120 + (i % 3) * 28,
-                z: 0.5 + (i % 4) * 0.18,
-                vx: (Math.random() - 0.5) * 1.7,
-                vy: 0.8 + Math.random() * 1.1,
-                radius: 10 + (i % 3) * 4,
-                color: ["#7dd3fc", "#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#67e8f9"][i]
-              }})),
-              particles: Array.from({{ length: 48 }}, () => ({{
-                angle: Math.random() * Math.PI * 2,
-                radius: 120 + Math.random() * 180,
-                speed: 0.0015 + Math.random() * 0.0025,
-                y: -40 + Math.random() * 220,
-                size: 1 + Math.random() * 2.5
-              }}))
-            }};
+          function resize() {{
+            const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+            canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          }}
 
-            function resize() {{
-              const dpr = Math.min(window.devicePixelRatio || 1, 2);
-              const rect = canvas.getBoundingClientRect();
-              canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-              canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-              ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          function animate(now) {{
+            if (now - lastFrame < frameInterval) {{
+              window.requestAnimationFrame(animate);
+              return;
             }}
+            lastFrame = now;
+            const t = now * 0.001;
+            const width = canvas.getBoundingClientRect().width;
+            const height = canvas.getBoundingClientRect().height;
+            const floorY = height * 0.78;
+            const centerX = width * (isMobile ? 0.58 : 0.67);
+            const centerY = height * 0.5;
 
-            function animate(now) {{
-              const t = now * 0.001;
-              const width = canvas.getBoundingClientRect().width;
-              const height = canvas.getBoundingClientRect().height;
-              const floorY = height * 0.78;
-              const centerX = width * 0.67;
-              const centerY = height * 0.5;
+            ctx.clearRect(0, 0, width, height);
 
-              ctx.clearRect(0, 0, width, height);
+            const bg = ctx.createLinearGradient(0, 0, 0, height);
+            bg.addColorStop(0, "rgba(0, 18, 12, 0.24)");
+            bg.addColorStop(1, "rgba(0, 8, 6, 0.04)");
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, width, height);
 
-              const bg = ctx.createLinearGradient(0, 0, 0, height);
-              bg.addColorStop(0, "rgba(0, 18, 12, 0.24)");
-              bg.addColorStop(1, "rgba(0, 8, 6, 0.04)");
-              ctx.fillStyle = bg;
-              ctx.fillRect(0, 0, width, height);
-
-              const haze = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.38);
-              haze.addColorStop(0, "rgba(16, 255, 163, 0.12)");
-              haze.addColorStop(1, "rgba(0,0,0,0)");
-              ctx.fillStyle = haze;
-              ctx.fillRect(0, 0, width, height);
+            const haze = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.38);
+            haze.addColorStop(0, "rgba(16, 255, 163, 0.12)");
+            haze.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = haze;
+            ctx.fillRect(0, 0, width, height);
 
             for (const particle of state.particles) {{
               particle.angle += particle.speed * 18;
@@ -620,24 +628,24 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             ctx.save();
             ctx.translate(centerX, centerY);
             ctx.rotate(0.95 + Math.sin(t * 0.55) * 0.06);
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = isMobile ? 14 : 20;
             ctx.shadowColor = "rgba(16,255,163,.35)";
             ctx.strokeStyle = "rgba(16, 255, 163, 0.62)";
-            ctx.lineWidth = 3;
+            ctx.lineWidth = isMobile ? 2.2 : 3;
             ctx.beginPath();
-            ctx.ellipse(0, 0, 126, 62, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, isMobile ? 98 : 126, isMobile ? 48 : 62, 0, 0, Math.PI * 2);
             ctx.stroke();
             ctx.shadowBlur = 0;
             ctx.strokeStyle = "rgba(187, 247, 208, 0.22)";
             ctx.lineWidth = 1.2;
             ctx.beginPath();
-            ctx.ellipse(0, 0, 150, 74, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, isMobile ? 118 : 150, isMobile ? 58 : 74, 0, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
 
             for (const bar of state.bars) {{
               const barHeight = 60 + Math.sin(t * 1.8 + bar.phase) * 34 + bar.base * 48;
-              const x = width * 0.5 + (bar.x - 290);
+              const x = width * (isMobile ? 0.46 : 0.5) + (bar.x - 290);
               const y = floorY - barHeight;
               const neonBar = ctx.createLinearGradient(x, y, x, floorY);
               neonBar.addColorStop(0, "rgba(110, 231, 183, 0.98)");
@@ -704,13 +712,12 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             ctx.fillStyle = horizon;
             ctx.fillRect(width * 0.36, floorY - 18, width * 0.6, 60);
 
-              window.requestAnimationFrame(animate);
-            }}
-
-            window.addEventListener("resize", resize);
-            resize();
             window.requestAnimationFrame(animate);
           }}
+
+          window.addEventListener("resize", resize);
+          resize();
+          window.requestAnimationFrame(animate);
         </script>
         """,
         height=500,
@@ -723,14 +730,89 @@ def render_terminal_background():
         <div id="terminal-bg-root" style="position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;"></div>
         <script type="module">
           const mount = document.getElementById("terminal-bg-root");
-          const prefersStaticBackground = window.matchMedia("(max-width: 900px), (prefers-reduced-motion: reduce)").matches;
+          const isMobile = window.matchMedia("(max-width: 900px)").matches;
+          const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          const prefersLightweightBackground = isMobile || prefersReducedMotion;
 
-          if (prefersStaticBackground) {
-            mount.style.background = `
-              radial-gradient(circle at top right, rgba(16, 255, 163, 0.10), transparent 22%),
-              radial-gradient(circle at 18% 16%, rgba(110, 231, 183, 0.08), transparent 18%),
-              linear-gradient(180deg, rgba(2, 7, 6, 0.10) 0%, rgba(4, 18, 14, 0.18) 48%, rgba(3, 10, 8, 0.16) 100%)
+          if (prefersLightweightBackground) {
+            mount.innerHTML = `
+              <canvas id="terminal-bg-canvas" style="width:100%;height:100%;display:block;"></canvas>
+              <div style="position:absolute;inset:0;background:
+                radial-gradient(circle at top right, rgba(16, 255, 163, 0.08), transparent 22%),
+                radial-gradient(circle at 18% 16%, rgba(110, 231, 183, 0.06), transparent 18%),
+                linear-gradient(180deg, rgba(2, 7, 6, 0.10) 0%, rgba(4, 18, 14, 0.16) 48%, rgba(3, 10, 8, 0.14) 100%);">
+              </div>
             `;
+
+            const canvas = document.getElementById("terminal-bg-canvas");
+            const ctx = canvas.getContext("2d");
+            const particles = Array.from({ length: isMobile ? 18 : 24 }, (_, index) => ({
+              x: Math.random(),
+              y: Math.random(),
+              radius: 1.5 + Math.random() * 3,
+              drift: 0.08 + Math.random() * 0.18,
+              speed: 0.18 + Math.random() * 0.36,
+              glow: index % 2 === 0 ? "rgba(52, 211, 153, 0.28)" : "rgba(134, 239, 172, 0.22)"
+            }));
+
+            let width = 0;
+            let height = 0;
+            let rafId = null;
+            let lastFrame = 0;
+            const frameInterval = prefersReducedMotion ? 1000 / 18 : isMobile ? 1000 / 24 : 1000 / 30;
+
+            function resizeCanvas() {
+              const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.1 : 1.5);
+              width = window.innerWidth;
+              height = window.innerHeight;
+              canvas.width = Math.max(1, Math.floor(width * dpr));
+              canvas.height = Math.max(1, Math.floor(height * dpr));
+              ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            function draw(now) {
+              if (now - lastFrame < frameInterval) {
+                rafId = window.requestAnimationFrame(draw);
+                return;
+              }
+              lastFrame = now;
+              const t = now * 0.001;
+              ctx.clearRect(0, 0, width, height);
+
+              const wash = ctx.createLinearGradient(0, 0, 0, height);
+              wash.addColorStop(0, "rgba(2, 12, 10, 0.05)");
+              wash.addColorStop(1, "rgba(3, 10, 8, 0.16)");
+              ctx.fillStyle = wash;
+              ctx.fillRect(0, 0, width, height);
+
+              particles.forEach((particle, index) => {
+                const px = particle.x * width + Math.sin(t * particle.drift + index) * (isMobile ? 12 : 18);
+                const py = ((particle.y * height) + (t * particle.speed * (isMobile ? 20 : 26))) % (height + 60) - 30;
+                const glow = ctx.createRadialGradient(px, py, 0, px, py, particle.radius * 7);
+                glow.addColorStop(0, particle.glow);
+                glow.addColorStop(1, "rgba(0,0,0,0)");
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(px, py, particle.radius * 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = "rgba(220, 252, 231, 0.22)";
+                ctx.beginPath();
+                ctx.arc(px, py, particle.radius, 0, Math.PI * 2);
+                ctx.fill();
+              });
+
+              rafId = window.requestAnimationFrame(draw);
+            }
+
+            window.addEventListener("resize", resizeCanvas);
+            resizeCanvas();
+            rafId = window.requestAnimationFrame(draw);
+
+            window.addEventListener("beforeunload", () => {
+              if (rafId) cancelAnimationFrame(rafId);
+              window.removeEventListener("resize", resizeCanvas);
+            });
           } else {
             const THREE = await import("https://esm.sh/three@0.169.0");
             const scene = new THREE.Scene();
@@ -1032,8 +1114,16 @@ def render_terminal_background():
 
             const clock = new THREE.Clock();
             let rafId = null;
+            let lastFrame = 0;
+            const frameInterval = 1000 / 60;
 
             function animate() {
+              const now = performance.now();
+              if (now - lastFrame < frameInterval) {
+                rafId = requestAnimationFrame(animate);
+                return;
+              }
+              lastFrame = now;
               const t = clock.getElapsedTime();
               uniforms.uTime.value = t;
 
@@ -1090,6 +1180,53 @@ def render_terminal_background():
         """,
         height=0,
     )
+
+
+def build_indicator_figure(frame, series_specs, title, *, chart_type="line", height=260):
+    indicator_fig = go.Figure()
+
+    for column_name, trace_name, color in series_specs:
+        if column_name not in frame.columns:
+            continue
+
+        if chart_type == "bar":
+            indicator_fig.add_trace(
+                go.Bar(
+                    x=frame.index,
+                    y=frame[column_name],
+                    name=trace_name,
+                    marker_color=color,
+                    opacity=0.78,
+                )
+            )
+        else:
+            indicator_fig.add_trace(
+                go.Scatter(
+                    x=frame.index,
+                    y=frame[column_name],
+                    name=trace_name,
+                    mode="lines",
+                    line={"color": color, "width": 2.2},
+                )
+            )
+
+    indicator_fig.update_layout(
+        template="plotly_dark",
+        title=title,
+        height=height,
+        margin={"l": 18, "r": 18, "t": 46, "b": 20},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(5, 17, 13, 0.68)",
+        hovermode="x unified",
+    )
+    indicator_fig.update_xaxes(showgrid=False)
+    indicator_fig.update_yaxes(
+        showgrid=True,
+        gridcolor="rgba(148, 163, 184, 0.12)",
+        zeroline=False,
+    )
+    return indicator_fig
 
 
 def build_custom_asset_summary(asset_key):
@@ -1374,6 +1511,205 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 .sidebar-status-chip.is-missing span {
     color: #f9caca;
+}
+
+.sidebar-hero {
+    position: relative;
+    overflow: hidden;
+    margin: 0.15rem 0 1rem;
+    padding: 1rem 1rem 0.95rem;
+    border-radius: 22px;
+    background:
+        linear-gradient(155deg, rgba(16, 10, 30, 0.96), rgba(6, 15, 13, 0.88)),
+        radial-gradient(circle at top right, rgba(70, 215, 255, 0.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(52, 211, 153, 0.15), transparent 32%);
+    border: 1px solid rgba(118, 234, 192, 0.20);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 18px 34px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(18px) saturate(160%);
+}
+
+.sidebar-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.06), transparent 36%),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 18px,
+            rgba(52, 211, 153, 0.04) 18px,
+            rgba(52, 211, 153, 0.04) 19px
+        );
+    pointer-events: none;
+}
+
+.sidebar-hero-kicker,
+.sidebar-deck-kicker {
+    position: relative;
+    z-index: 1;
+    color: var(--terminal-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.68rem;
+    margin-bottom: 0.35rem;
+}
+
+.sidebar-hero-title {
+    position: relative;
+    z-index: 1;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.22rem;
+    color: var(--terminal-text);
+    margin-bottom: 0.3rem;
+    text-shadow: 0 0 16px rgba(16,255,163,0.14);
+}
+
+.sidebar-hero-copy,
+.sidebar-deck-copy {
+    position: relative;
+    z-index: 1;
+    color: #caefe0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.sidebar-orbit-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 0.8rem;
+}
+
+.sidebar-orbit-node {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 35%, #ecfeff, #34d399 62%, rgba(52, 211, 153, 0.18));
+    box-shadow:
+        0 0 0 5px rgba(52, 211, 153, 0.08),
+        0 0 18px rgba(52, 211, 153, 0.26);
+}
+
+.sidebar-orbit-label {
+    color: #dcfce7;
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.sidebar-deck {
+    position: relative;
+    overflow: hidden;
+    margin: 0.15rem 0 0.95rem;
+    padding: 0.95rem 0.95rem 0.75rem;
+    border-radius: 20px;
+    background:
+        linear-gradient(160deg, rgba(6, 23, 18, 0.92), rgba(6, 15, 13, 0.82)),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.14), transparent 34%);
+    border: 1px solid rgba(52, 211, 153, 0.18);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 14px 28px rgba(0, 0, 0, 0.24);
+}
+
+[data-testid="stSidebar"] .stSelectbox {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+[data-testid="stSidebar"] .stSelectbox > label {
+    color: #d8fff0 !important;
+    font-family: "Space Grotesk", sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase;
+    margin-bottom: 0.38rem !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {
+    position: relative;
+    transform-style: preserve-3d;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
+    min-height: 64px;
+    padding: 0.5rem 0.85rem;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(160deg, rgba(18, 10, 31, 0.96), rgba(5, 16, 13, 0.88)),
+        radial-gradient(circle at top right, rgba(70, 215, 255, 0.16), transparent 30%) !important;
+    border: 1px solid rgba(110, 231, 183, 0.22) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 16px 26px rgba(0, 0, 0, 0.24),
+        0 10px 0 rgba(2, 10, 8, 0.36) !important;
+    transform: perspective(1100px) rotateX(9deg) translateY(0);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    backdrop-filter: blur(18px) saturate(155%);
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div:hover,
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"]:focus-within > div {
+    transform: perspective(1100px) rotateX(4deg) translateY(-3px);
+    border-color: rgba(134, 239, 172, 0.34) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 22px 34px rgba(0, 0, 0, 0.28),
+        0 8px 0 rgba(2, 10, 8, 0.32) !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div:active {
+    transform: perspective(1100px) rotateX(2deg) translateY(3px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 18px rgba(0, 0, 0, 0.24),
+        0 2px 0 rgba(2, 10, 8, 0.30) !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span,
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] div {
+    color: var(--terminal-text) !important;
+    font-family: "IBM Plex Mono", monospace !important;
+}
+
+[data-testid="stSidebar"] [role="listbox"] {
+    background: rgba(8, 17, 14, 0.96) !important;
+    border: 1px solid rgba(110, 231, 183, 0.18) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34) !important;
+    backdrop-filter: blur(18px) saturate(150%);
+}
+
+[data-testid="stSidebar"] [role="option"] {
+    border-radius: 12px !important;
+    margin: 0.2rem 0.35rem !important;
+    min-height: 42px !important;
+}
+
+[data-testid="stSidebar"] [role="option"][aria-selected="true"] {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.18), rgba(70, 215, 255, 0.14)) !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] svg {
+    color: #9cf6d0 !important;
+}
+
+@media (max-width: 900px) {
+    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
+        min-height: 60px;
+        transform: perspective(1000px) rotateX(5deg) translateY(0);
+    }
+
+    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div:hover,
+    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"]:focus-within > div {
+        transform: perspective(1000px) rotateX(2deg) translateY(-2px);
+    }
 }
 
 .terminal-metrics-grid {
@@ -2026,7 +2362,26 @@ ASSETS = {
     ],
 }
 
-st.sidebar.title("Market Tools")
+st.sidebar.markdown(
+    """
+    <div class="sidebar-hero">
+        <div class="sidebar-hero-kicker">Touch Console</div>
+        <div class="sidebar-hero-title">Market Tools</div>
+        <div class="sidebar-hero-copy">A tactile control deck for market mode, forecast range, and chart behavior across desktop and touch screens.</div>
+        <div class="sidebar-orbit-row">
+            <span class="sidebar-orbit-node"></span>
+            <span class="sidebar-orbit-node"></span>
+            <span class="sidebar-orbit-node"></span>
+            <span class="sidebar-orbit-label">Interactive UI Layer</span>
+        </div>
+    </div>
+    <div class="sidebar-deck">
+        <div class="sidebar-deck-kicker">Control Deck</div>
+        <div class="sidebar-deck-copy">Choose your workspace, time horizon, and chart surface with touch-friendly 3D panels.</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 asset_workbook_available = _get_workbook_source("custom_asset_workbook_bytes", CUSTOM_ASSET_WORKBOOK, "asset")
 summary_workbook_available = _get_workbook_source("custom_summary_workbook_bytes", CUSTOM_SUMMARY_WORKBOOK, "summary")
 
@@ -2989,31 +3344,85 @@ with models_tab:
                 st.dataframe(asset_summary, width="stretch", hide_index=True)
 
 with indicators_tab:
-    ind_left, ind_right = st.columns(2)
-    with ind_left:
-        st.subheader("📈 RSI")
-        st.line_chart(data["RSI"])
+    indicator_frame = data.tail(180).copy()
+    st.caption("Indicators are trimmed to the latest 180 points here to keep mobile scrolling stable.")
 
-        st.subheader("📊 MACD")
-        st.line_chart(data[["MACD", "MACD_SIGNAL"]])
+    st.plotly_chart(
+        build_indicator_figure(
+            indicator_frame,
+            [("RSI", "RSI", "#22c55e")],
+            "📈 RSI",
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
-        st.subheader("📉 Stochastic")
-        st.line_chart(data[["STOCH_K", "STOCH_D"]])
+    st.plotly_chart(
+        build_indicator_figure(
+            indicator_frame,
+            [("MACD", "MACD", "#38bdf8"), ("MACD_SIGNAL", "Signal", "#f472b6")],
+            "📊 MACD",
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
-        st.subheader("📦 Volume Analysis")
-        st.bar_chart(data["Volume"])
-        st.line_chart(data["Volume_MA20"])
+    st.plotly_chart(
+        build_indicator_figure(
+            indicator_frame,
+            [("STOCH_K", "%K", "#f59e0b"), ("STOCH_D", "%D", "#34d399")],
+            "📉 Stochastic",
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
-    with ind_right:
-        st.subheader("📊 CCI")
-        st.line_chart(data["CCI"])
+    volume_fig = build_indicator_figure(
+        indicator_frame,
+        [("Volume", "Volume", "#34d399")],
+        "📦 Volume Analysis",
+        chart_type="bar",
+        height=280,
+    )
+    if "Volume_MA20" in indicator_frame.columns:
+        volume_fig.add_trace(
+            go.Scatter(
+                x=indicator_frame.index,
+                y=indicator_frame["Volume_MA20"],
+                name="MA20",
+                mode="lines",
+                line={"color": "#facc15", "width": 2.2},
+            )
+        )
+    st.plotly_chart(
+        volume_fig,
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
-        st.subheader("🟢 Parabolic SAR")
-        st.line_chart(data["PSAR"])
+    st.plotly_chart(
+        build_indicator_figure(
+            indicator_frame,
+            [("CCI", "CCI", "#a78bfa")],
+            "📊 CCI",
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
 
-        st.subheader("🕯 Price Action Signals")
-        if patterns:
-            for p in patterns[-10:]:
-                st.write(f"{p[0].date()} → {p[1]}")
-        else:
-            st.caption("No recent price action signals detected.")
+    st.plotly_chart(
+        build_indicator_figure(
+            indicator_frame,
+            [("PSAR", "PSAR", "#fb7185"), ("Close", "Close", "#e2e8f0")],
+            "🟢 Parabolic SAR",
+        ),
+        width="stretch",
+        config={"displayModeBar": False},
+    )
+
+    st.subheader("🕯 Price Action Signals")
+    if patterns:
+        for p in patterns[-10:]:
+            st.write(f"{p[0].date()} → {p[1]}")
+    else:
+        st.caption("No recent price action signals detected.")
