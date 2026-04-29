@@ -1368,6 +1368,178 @@ button[data-baseweb="tab"][aria-selected="true"] {
     margin: 0.3rem 0 1rem;
 }
 
+.control-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin: 0.15rem 0 1rem;
+}
+
+.control-panel-card {
+    min-width: 0;
+    padding: 0.72rem 0.78rem;
+    border-radius: 16px;
+    background:
+        linear-gradient(160deg, rgba(5, 20, 15, 0.90), rgba(5, 14, 12, 0.76)),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.16), transparent 34%);
+    border: 1px solid rgba(52, 211, 153, 0.16);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.control-panel-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--terminal-dim);
+    margin-bottom: 0.38rem;
+}
+
+.control-panel-value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    color: var(--terminal-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.comparison-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0.35rem 0 0.8rem;
+}
+
+.comparison-summary-card {
+    min-width: 0;
+    padding: 0.82rem 0.9rem;
+    border-radius: 18px;
+    background:
+        linear-gradient(160deg, rgba(5, 20, 15, 0.90), rgba(5, 14, 12, 0.76)),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.16), transparent 34%);
+    border: 1px solid rgba(52, 211, 153, 0.16);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.comparison-summary-label {
+    font-size: 0.64rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--terminal-dim);
+    margin-bottom: 0.42rem;
+}
+
+.comparison-summary-value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.02rem;
+    line-height: 1.2;
+    color: var(--terminal-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tab-3d-hero {
+    position: relative;
+    overflow: hidden;
+    margin: 0.1rem 0 1rem;
+    padding: 1rem 1.05rem 0.95rem;
+    border-radius: 22px;
+    background:
+        linear-gradient(155deg, rgba(6, 24, 18, 0.92), rgba(4, 14, 11, 0.82)),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.22), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(110, 231, 183, 0.10), transparent 30%);
+    border: 1px solid rgba(52, 211, 153, 0.18);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 22px 38px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(18px) saturate(150%);
+    transform: perspective(1400px) rotateX(5deg) translateY(0);
+}
+
+.tab-3d-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.05), transparent 36%),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 18px,
+            rgba(52, 211, 153, 0.035) 18px,
+            rgba(52, 211, 153, 0.035) 19px
+        );
+    pointer-events: none;
+}
+
+.tab-3d-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto 18px 10px 18px;
+    height: 28px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(16,255,163,0.18), transparent 72%);
+    filter: blur(16px);
+    pointer-events: none;
+}
+
+.tab-3d-kicker {
+    position: relative;
+    z-index: 1;
+    color: var(--terminal-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.68rem;
+    margin-bottom: 0.3rem;
+}
+
+.tab-3d-title {
+    position: relative;
+    z-index: 1;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.3rem;
+    color: var(--terminal-text);
+    margin-bottom: 0.3rem;
+    text-shadow: 0 0 16px rgba(16,255,163,0.12);
+}
+
+.tab-3d-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 58rem;
+    color: #cdeedd;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stPlotlyChart"],
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stDataFrame"],
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stMetric"],
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stExpander"] {
+    transform: perspective(1200px) rotateX(3deg) translateY(0);
+    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stPlotlyChart"]:hover,
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stDataFrame"]:hover,
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stMetric"]:hover,
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stExpander"]:hover {
+    transform: perspective(1200px) rotateX(1deg) translateY(-3px);
+}
+
+[data-testid="stTabs"] [role="tabpanel"] [data-testid="stMarkdownContainer"]:has(.tab-3d-hero) {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
 .terminal-metric-card {
     position: relative;
     overflow: hidden;
@@ -1544,11 +1716,23 @@ button[data-baseweb="tab"][aria-selected="true"] {
     .terminal-metrics-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .control-panel-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .comparison-summary-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 700px) {
     .terminal-metrics-grid {
         grid-template-columns: 1fr;
+    }
+
+    .control-panel-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -2403,6 +2587,55 @@ def render_historical_terminal_header_metrics(metrics):
         unsafe_allow_html=True,
     )
 
+
+def render_compact_control_panel(items):
+    cards = []
+    for label, value in items:
+        cards.append(
+            f"""
+            <div class="control-panel-card">
+                <div class="control-panel-label">{escape(str(label))}</div>
+                <div class="control-panel-value" title="{escape(str(value))}">{escape(str(value))}</div>
+            </div>
+            """
+        )
+
+    st.markdown(
+        f'<div class="control-panel-grid">{"".join(cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_comparison_summary(items):
+    cards = []
+    for label, value in items:
+        cards.append(
+            f"""
+            <div class="comparison-summary-card">
+                <div class="comparison-summary-label">{escape(str(label))}</div>
+                <div class="comparison-summary-value" title="{escape(str(value))}">{escape(str(value))}</div>
+            </div>
+            """
+        )
+
+    st.markdown(
+        f'<div class="comparison-summary-grid">{"".join(cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_tab_3d_hero(kicker, title, copy):
+    st.markdown(
+        f"""
+        <div class="tab-3d-hero">
+            <div class="tab-3d-kicker">{escape(str(kicker))}</div>
+            <div class="tab-3d-title">{escape(str(title))}</div>
+            <div class="tab-3d-copy">{escape(str(copy))}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 title_suffix = f" ({selected_year})" if is_custom_asset and selected_year != "All Years" else ""
 st.title(f"📈 RUPATCHI MODEL — {display_symbol}{title_suffix}")
 st.caption(
@@ -2500,14 +2733,22 @@ overview_tab, factors_tab, models_tab, indicators_tab = st.tabs(
 )
 
 with overview_tab:
+    render_tab_3d_hero(
+        "Overview Deck",
+        "Market Command Surface",
+        "A raised cockpit for the live read: compact controls, quick context, and top-level market signals in one 3D-styled layer.",
+    )
     st.markdown('<div class="ui-section-kicker">Workspace</div><div class="ui-section-title">Control Panel</div>', unsafe_allow_html=True)
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
-    col1.metric("Asset", display_symbol)
-    col2.metric("Price", f"{currency}{price:.2f}")
-    col3.metric("Signal", signal)
-    col4.metric("Trend", trend)
-    col5.metric("Sentiment", f"{sentiment}%")
-    col6.metric("RSI", round(rsi, 2))
+    render_compact_control_panel(
+        [
+            ("Asset", display_symbol),
+            ("Price", f"{currency}{price:.2f}"),
+            ("Signal", signal),
+            ("Trend", trend),
+            ("Sentiment", f"{sentiment}%"),
+            ("RSI", f"{rsi:.2f}"),
+        ]
+    )
 
     st.markdown('<div class="ui-section-kicker">Market Read</div><div class="ui-section-title">Dashboard</div>', unsafe_allow_html=True)
     dash_a, dash_b, dash_c = st.columns(3)
@@ -2554,6 +2795,11 @@ with overview_tab:
             st.info("No market news available for this asset right now")
 
 with factors_tab:
+    render_tab_3d_hero(
+        "Factors Deck",
+        "Cross-Signal Matrix",
+        "Correlation, sentiment, macro drivers, and volatility are staged like floating analysis surfaces for a deeper factor read.",
+    )
     st.markdown('<div class="ui-section-kicker">Cross Signals</div><div class="ui-section-title">Correlation Map</div>', unsafe_allow_html=True)
     heatmap_fig, ax = plt.subplots(figsize=(7.5, 5.2))
     sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", ax=ax)
@@ -2585,6 +2831,11 @@ with factors_tab:
         st.line_chart(data["BB_Width"])
 
 with models_tab:
+    render_tab_3d_hero(
+        "Models Deck",
+        "Forecast Lab",
+        "Model diagnostics and out-of-sample comparison now sit inside a more dimensional lab-style panel so the evaluation layer feels distinct.",
+    )
     st.markdown('<div class="ui-section-kicker">Forecast Engine</div><div class="ui-section-title">Model Comparison</div>', unsafe_allow_html=True)
     results = get_cached_model_results(asset_key, data_source, selected_year)
     if "Error" in results:
@@ -2607,18 +2858,29 @@ with models_tab:
             )
 
         metric_df = pd.DataFrame(metric_rows)
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Best Overall", results["best_model"])
         best_rmse = metric_df.loc[metric_df["Model"] == results["best_model"], "RMSE"].iloc[0]
-        col2.metric("Best RMSE", best_rmse)
 
         better_ml_model = results.get("best_forecasting_model")
+        comparison_label = "N/A"
         if better_ml_model:
             better_rmse = metric_df.loc[metric_df["Model"] == better_ml_model, "RMSE"].iloc[0]
-            col3.metric("ARIMA vs RF", better_ml_model)
+            comparison_label = better_ml_model
+            render_comparison_summary(
+                [
+                    ("Best Overall", results["best_model"]),
+                    ("Best RMSE", f"{best_rmse:.4f}"),
+                    ("ARIMA vs RF", comparison_label),
+                ]
+            )
             st.caption(f"Between ARIMA and Random Forest, **{better_ml_model}** has the lower RMSE of **{better_rmse}**.")
         else:
-            col3.metric("ARIMA vs RF", "N/A")
+            render_comparison_summary(
+                [
+                    ("Best Overall", results["best_model"]),
+                    ("Best RMSE", f"{best_rmse:.4f}"),
+                    ("ARIMA vs RF", comparison_label),
+                ]
+            )
 
         st.dataframe(metric_df, width="stretch", hide_index=True)
 
@@ -2663,6 +2925,11 @@ with models_tab:
                 st.dataframe(asset_summary, width="stretch", hide_index=True)
 
 with indicators_tab:
+    render_tab_3d_hero(
+        "Indicators Deck",
+        "Signal Stack",
+        "Momentum, oscillators, trend overlays, and price-action reads are presented as stacked technical modules with a subtle 3D lift.",
+    )
     ind_left, ind_right = st.columns(2)
     with ind_left:
         st.subheader("📈 RSI")
