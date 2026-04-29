@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 import requests
 
 SAFE_SYMBOL = re.compile(r"^[A-Z0-9.\-_=^]{1,20}$")
-STRIP_MARKET_SUFFIX = re.compile(r"(\.NS|\.BO|-USD|=X)$")
+STRIP_MARKET_SUFFIX = re.compile(r"(\.NS|\.BO|-USD|=X|=F)$")
 MAX_NEWS_ITEMS = 8
 GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
 
@@ -19,6 +19,8 @@ def _build_google_news_query(symbol):
         return f'"{base_symbol}" forex OR currency market'
     if normalized_symbol.endswith("-USD"):
         return f'"{base_symbol}" crypto OR cryptocurrency market'
+    if normalized_symbol.endswith("=F"):
+        return f'"{base_symbol}" commodity OR futures market'
     if normalized_symbol.startswith("^"):
         return f'"{base_symbol[1:]}" index market'
 
