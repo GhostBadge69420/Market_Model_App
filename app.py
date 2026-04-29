@@ -720,7 +720,7 @@ def render_terminal_background():
 
           const mount = document.getElementById("terminal-bg-root");
           const scene = new THREE.Scene();
-          scene.fog = new THREE.FogExp2("#12091d", 0.05);
+          scene.fog = new THREE.FogExp2("#03110d", 0.045);
 
           const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
           camera.position.set(0, 0.45, 8.8);
@@ -731,10 +731,10 @@ def render_terminal_background():
           renderer.outputColorSpace = THREE.SRGBColorSpace;
           mount.appendChild(renderer.domElement);
 
-          const ambient = new THREE.AmbientLight("#f5b6ff", 0.92);
-          const keyLight = new THREE.DirectionalLight("#46d7ff", 1.55);
+          const ambient = new THREE.AmbientLight("#a7f3d0", 0.88);
+          const keyLight = new THREE.DirectionalLight("#34d399", 1.55);
           keyLight.position.set(5, 6, 7);
-          const rimLight = new THREE.DirectionalLight("#ff7ac6", 1.35);
+          const rimLight = new THREE.DirectionalLight("#22c55e", 1.3);
           rimLight.position.set(-4, 2, 5);
           scene.add(ambient, keyLight, rimLight);
 
@@ -789,14 +789,14 @@ def render_terminal_background():
                   float grid = abs(sin((centered.x + waveB) * 20.0)) * 0.06 + abs(sin((centered.y + waveA) * 24.0)) * 0.045;
                   float energy = smoothstep(0.24, 0.95, field + grid);
 
-                  vec3 base = vec3(0.045, 0.02, 0.08);
-                  vec3 cyan = vec3(0.19, 0.86, 1.0);
-                  vec3 pink = vec3(1.0, 0.50, 0.82);
-                  vec3 lavender = vec3(0.69, 0.57, 1.0);
-                  vec3 glow = mix(cyan, pink, smoothstep(-0.45, 0.55, centered.x + waveA));
+                  vec3 base = vec3(0.01, 0.05, 0.04);
+                  vec3 neonA = vec3(0.06, 1.0, 0.68);
+                  vec3 neonB = vec3(0.20, 0.96, 0.48);
+                  vec3 neonC = vec3(0.50, 1.0, 0.78);
+                  vec3 glow = mix(neonA, neonB, smoothstep(-0.45, 0.55, centered.x + waveA));
                   float radial = 1.0 - smoothstep(0.15, 1.1, length(centered) * 1.15);
-                  vec3 color = base + glow * energy * 0.16 + lavender * radial * 0.14;
-                  color += vec3(1.0, 0.78, 0.88) * pow(max(0.0, 1.0 - length(centered * vec2(1.0, 1.4))), 3.0) * 0.10;
+                  vec3 color = base + glow * energy * 0.16 + neonC * radial * 0.12;
+                  color += vec3(0.62, 1.0, 0.84) * pow(max(0.0, 1.0 - length(centered * vec2(1.0, 1.4))), 3.0) * 0.08;
                   float alpha = 0.74 + radial * 0.14;
                   gl_FragColor = vec4(color, alpha);
                 }
@@ -832,11 +832,11 @@ def render_terminal_background():
                 void main() {
                   float fresnel = pow(1.0 - abs(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0))), 2.4);
                   float pulse = 0.55 + 0.45 * sin(uTime * 1.5 + vPosition.y * 1.3);
-                  vec3 cyan = vec3(0.16, 0.84, 1.0);
-                  vec3 pink = vec3(1.0, 0.48, 0.80);
-                  vec3 lilac = vec3(0.83, 0.74, 1.0);
-                  vec3 color = mix(cyan, pink, smoothstep(-1.1, 1.1, vPosition.y * 0.7 + sin(uTime * 0.9)));
-                  color += fresnel * lilac;
+                  vec3 neonA = vec3(0.10, 1.0, 0.66);
+                  vec3 neonB = vec3(0.32, 0.96, 0.58);
+                  vec3 mint = vec3(0.72, 1.0, 0.86);
+                  vec3 color = mix(neonA, neonB, smoothstep(-1.1, 1.1, vPosition.y * 0.7 + sin(uTime * 0.9)));
+                  color += fresnel * mint;
                   gl_FragColor = vec4(color * (0.72 + pulse * 0.35), 0.92);
                 }
               `
@@ -848,8 +848,8 @@ def render_terminal_background():
           const haloA = new THREE.Mesh(
             new THREE.TorusGeometry(3.45, 0.055, 32, 220),
             new THREE.MeshPhysicalMaterial({
-              color: "#46d7ff",
-              emissive: "#22c7ff",
+              color: "#34d399",
+              emissive: "#10b981",
               emissiveIntensity: 0.9,
               transparent: true,
               opacity: 0.82,
@@ -864,9 +864,9 @@ def render_terminal_background():
           const haloB = new THREE.Mesh(
             new THREE.TorusGeometry(2.4, 0.03, 24, 180),
             new THREE.MeshPhysicalMaterial({
-              color: "#ff7ac6",
-              emissive: "#ff4fad",
-              emissiveIntensity: 1.2,
+              color: "#86efac",
+              emissive: "#22c55e",
+              emissiveIntensity: 1.0,
               transparent: true,
               opacity: 0.78,
               roughness: 0.16,
@@ -900,8 +900,8 @@ def render_terminal_background():
                 vec2 grid = abs(fract(vUv * vec2(22.0, 16.0) - 0.5) - 0.5) / fwidth(vUv * vec2(22.0, 16.0));
                 float line = 1.0 - min(min(grid.x, grid.y), 1.0);
                 float fade = smoothstep(1.1, 0.0, vUv.y);
-                vec3 color = mix(vec3(0.03, 0.02, 0.07), vec3(0.12, 0.63, 0.95), line * 0.58);
-                color += vec3(0.92, 0.42, 0.76) * pow(1.0 - vUv.y, 2.4) * 0.22;
+                vec3 color = mix(vec3(0.01, 0.06, 0.04), vec3(0.10, 0.92, 0.60), line * 0.58);
+                color += vec3(0.72, 1.0, 0.84) * pow(1.0 - vUv.y, 2.4) * 0.18;
                 gl_FragColor = vec4(color, (0.18 + line * 0.22) * fade);
               }
             `
@@ -960,9 +960,9 @@ def render_terminal_background():
                   vec2 uv = gl_PointCoord - 0.5;
                   float d = length(uv);
                   float alpha = smoothstep(0.48, 0.0, d);
-                  vec3 cyan = vec3(0.24, 0.85, 1.0);
-                  vec3 pink = vec3(1.0, 0.68, 0.86);
-                  vec3 color = mix(cyan, pink, vMix);
+                  vec3 neonA = vec3(0.10, 1.0, 0.68);
+                  vec3 neonB = vec3(0.34, 0.94, 0.52);
+                  vec3 color = mix(neonA, neonB, vMix);
                   gl_FragColor = vec4(color, alpha * 0.72);
                 }
               `
@@ -973,7 +973,7 @@ def render_terminal_background():
           const petalCount = 42;
           const petalGeometry = new THREE.PlaneGeometry(0.12, 0.18, 1, 1);
           const petalMaterial = new THREE.MeshBasicMaterial({
-            color: "#ffd2ea",
+            color: "#bbf7d0",
             transparent: true,
             opacity: 0.32,
             side: THREE.DoubleSide,
@@ -1002,8 +1002,8 @@ def render_terminal_background():
             const height = 0.85 + ((i * 17) % 7) * 0.22;
             const geometry = new THREE.BoxGeometry(0.18, height, 0.18);
             const material = new THREE.MeshPhysicalMaterial({
-              color: i % 2 === 0 ? "#46d7ff" : "#ff7ac6",
-              emissive: i % 2 === 0 ? "#22c7ff" : "#ff4fad",
+              color: i % 2 === 0 ? "#34d399" : "#86efac",
+              emissive: i % 2 === 0 ? "#10b981" : "#22c55e",
               emissiveIntensity: 0.58,
               roughness: 0.28,
               metalness: 0.86,
@@ -1153,20 +1153,20 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
 
 :root {
-    --terminal-bg: rgba(12, 8, 24, 0.54);
-    --terminal-border: rgba(186, 129, 255, 0.22);
-    --terminal-accent: #ff69b4;
-    --terminal-cyan: #46d7ff;
-    --terminal-text: #edf6ff;
-    --terminal-dim: #bbaed8;
+    --terminal-bg: rgba(4, 18, 14, 0.54);
+    --terminal-border: rgba(52, 211, 153, 0.22);
+    --terminal-accent: #22c55e;
+    --terminal-cyan: #34d399;
+    --terminal-text: #ecfdf5;
+    --terminal-dim: #9dd6b6;
 }
 
 html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
     background:
-        radial-gradient(circle at top right, rgba(70, 215, 255, 0.16), transparent 20%),
-        radial-gradient(circle at 18% 16%, rgba(255, 122, 198, 0.13), transparent 16%),
-        radial-gradient(circle at 50% 120%, rgba(181, 145, 255, 0.12), transparent 32%),
-        linear-gradient(180deg, #060410 0%, #11091d 48%, #090612 100%);
+        radial-gradient(circle at top right, rgba(16, 255, 163, 0.16), transparent 20%),
+        radial-gradient(circle at 18% 16%, rgba(110, 231, 183, 0.11), transparent 16%),
+        radial-gradient(circle at 50% 120%, rgba(34, 197, 94, 0.10), transparent 32%),
+        linear-gradient(180deg, #020706 0%, #04120e 48%, #030a08 100%);
     color: var(--terminal-text);
     font-family: "IBM Plex Mono", monospace;
 }
@@ -1177,8 +1177,8 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
 }
 
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, rgba(15, 9, 27, 0.96) 0%, rgba(8, 8, 18, 0.92) 100%);
-    border-right: 1px solid rgba(150, 118, 255, 0.16);
+    background: linear-gradient(180deg, rgba(4, 18, 14, 0.96) 0%, rgba(2, 10, 8, 0.92) 100%);
+    border-right: 1px solid rgba(52, 211, 153, 0.16);
 }
 
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
