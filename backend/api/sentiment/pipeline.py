@@ -1,10 +1,7 @@
-from functools import lru_cache
-
 from .analyzer import analyze_sentiment
 from .news_loader import fetch_news
 
 
-@lru_cache(maxsize=64)
 def get_news_sentiment(symbol):
     news_list = fetch_news(symbol)
 
