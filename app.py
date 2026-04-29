@@ -2215,7 +2215,7 @@ def fetch_news(symbol):
         return {"news": []}
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=90)
 def get_cached_sentiment(symbol):
     return get_news_sentiment(symbol)
 
@@ -2589,12 +2589,13 @@ data = compute_indicators(data)
 
 # ---------------- SENTIMENT ----------------
 def get_sentiment_series(symbol, index):
-    score = 0 if is_custom_asset else get_cached_sentiment(symbol)
+    raw_score = 0 if is_custom_asset else get_cached_sentiment(symbol)
+    score = 50 if is_custom_asset else _normalize_live_sentiment_score(raw_score)
 
     # spread same sentiment across chart timeline
     return pd.Series([score] * len(index), index=index)
 
-sentiment_score = 0 if is_custom_asset else get_cached_sentiment(symbol)
+sentiment_score = 50 if is_custom_asset else _normalize_live_sentiment_score(get_cached_sentiment(symbol))
 
 data["sentiment"] = np.linspace(
     sentiment_score - 0.1,
@@ -2786,6 +2787,55 @@ def _safe_float(value, default=0.0):
         return default
 
 
+def _normalize_live_sentiment_score(raw_score):
+    value = _safe_float(raw_score, 0.0)
+
+    # FinBERT pipeline returns a score in the -1..1 range.
+    if -1.0 <= value <= 1.0:
+        return max(0.0, min(100.0, round((value + 1.0) * 50.0, 2)))
+
+    return max(0.0, min(100.0, value))
+
+
+def _build_live_market_sentiment(df, raw_sentiment_score):
+    news_score = _normalize_live_sentiment_score(raw_sentiment_score)
+    technical_score = 50.0
+
+    ma20 = _safe_float(df["MA20"].iloc[-1], 0.0) if "MA20" in df.columns else 0.0
+    ma50 = _safe_float(df["MA50"].iloc[-1], 0.0) if "MA50" in df.columns else 0.0
+    macd = _safe_float(df["MACD"].iloc[-1], 0.0) if "MACD" in df.columns else 0.0
+    macd_signal = _safe_float(df["MACD_SIGNAL"].iloc[-1], 0.0) if "MACD_SIGNAL" in df.columns else 0.0
+    rsi = _safe_float(df["RSI"].iloc[-1], 50.0) if "RSI" in df.columns else 50.0
+
+    if ma20 and ma50:
+        technical_score += 12 if ma20 >= ma50 else -12
+
+    technical_score += 10 if macd >= macd_signal else -10
+
+    if rsi >= 65:
+        technical_score -= 8
+    elif rsi <= 35:
+        technical_score += 8
+    elif 45 <= rsi <= 60:
+        technical_score += 5
+
+    if len(df) >= 6 and "Close" in df.columns:
+        latest_close = _safe_float(df["Close"].iloc[-1], 0.0)
+        prior_close = _safe_float(df["Close"].iloc[-6], latest_close)
+        if prior_close:
+            move_5d_pct = ((latest_close - prior_close) / prior_close) * 100
+            technical_score += max(-12.0, min(12.0, move_5d_pct * 1.5))
+
+    technical_score = max(0.0, min(100.0, technical_score))
+    market_score = round((news_score * 0.65) + (technical_score * 0.35), 2)
+
+    return {
+        "people_positive": news_score,
+        "people_negative": max(0.0, 100.0 - news_score),
+        "market_score": market_score,
+    }
+
+
 def build_header_metrics(df, signal, trend, sentiment_score, currency):
     latest_price = _safe_float(df["Close"].iloc[-1])
     previous_price = latest_price
@@ -2794,9 +2844,10 @@ def build_header_metrics(df, signal, trend, sentiment_score, currency):
 
     price_change = latest_price - previous_price
     price_change_pct = (price_change / previous_price * 100) if previous_price else 0
-    people_positive = max(0.0, min(100.0, _safe_float(sentiment_score, 50.0)))
-    people_negative = max(0.0, 100.0 - people_positive)
-    market_view = sentiment_breakdown(people_positive)
+    live_sentiment = _build_live_market_sentiment(df, sentiment_score)
+    people_positive = live_sentiment["people_positive"]
+    people_negative = live_sentiment["people_negative"]
+    market_view = sentiment_breakdown(live_sentiment["market_score"])
 
     signal_text = str(signal).upper()
     active_action = "EXIT"
@@ -2825,6 +2876,7 @@ def build_header_metrics(df, signal, trend, sentiment_score, currency):
         "trend": trend,
         "people_positive": people_positive,
         "people_negative": people_negative,
+        "market_score": live_sentiment["market_score"],
         "bullish": market_view["bullish_percent"],
         "bearish": market_view["bearish_percent"],
         "neutral": market_view["neutral_percent"],
