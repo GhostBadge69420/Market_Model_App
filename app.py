@@ -2588,6 +2588,25 @@ if "Close" not in data.columns:
 data = compute_indicators(data)
 
 # ---------------- SENTIMENT ----------------
+def _safe_float(value, default=0.0):
+    try:
+        if pd.isna(value):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_live_sentiment_score(raw_score):
+    value = _safe_float(raw_score, 0.0)
+
+    # FinBERT pipeline returns a score in the -1..1 range.
+    if -1.0 <= value <= 1.0:
+        return max(0.0, min(100.0, round((value + 1.0) * 50.0, 2)))
+
+    return max(0.0, min(100.0, value))
+
+
 def get_sentiment_series(symbol, index):
     raw_score = 0 if is_custom_asset else get_cached_sentiment(symbol)
     score = 50 if is_custom_asset else _normalize_live_sentiment_score(raw_score)
