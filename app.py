@@ -1445,6 +1445,43 @@ button[data-baseweb="tab"][aria-selected="true"] {
     word-break: break-word;
 }
 
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0.2rem 0 0.9rem;
+}
+
+.snapshot-card {
+    min-width: 0;
+    padding: 0.78rem 0.85rem;
+    border-radius: 16px;
+    background:
+        linear-gradient(160deg, rgba(5, 20, 15, 0.90), rgba(5, 14, 12, 0.76)),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.14), transparent 34%);
+    border: 1px solid rgba(52, 211, 153, 0.16);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.snapshot-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--terminal-dim);
+    margin-bottom: 0.4rem;
+}
+
+.snapshot-value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    color: var(--terminal-text);
+    white-space: normal;
+    word-break: break-word;
+}
+
 .tab-3d-hero {
     position: relative;
     overflow: hidden;
@@ -1725,6 +1762,10 @@ button[data-baseweb="tab"][aria-selected="true"] {
     .comparison-summary-grid {
         grid-template-columns: 1fr;
     }
+
+    .snapshot-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 700px) {
@@ -1734,6 +1775,10 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
     .control-panel-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .snapshot-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -2625,6 +2670,24 @@ def render_comparison_summary(items):
             )
 
 
+def render_snapshot_cards(items):
+    cards = []
+    for label, value in items:
+        cards.append(
+            f"""
+            <div class="snapshot-card">
+                <div class="snapshot-label">{escape(str(label))}</div>
+                <div class="snapshot-value" title="{escape(str(value))}">{escape(str(value))}</div>
+            </div>
+            """
+        )
+
+    st.markdown(
+        f'<div class="snapshot-grid">{"".join(cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_tab_3d_hero(kicker, title, copy):
     st.markdown(
         f"""
@@ -2761,11 +2824,14 @@ with overview_tab:
     sent_c.metric("Neutral ⚪", f"{round(neu,1)}%")
 
     st.markdown('<div class="ui-section-kicker">Model Inputs</div><div class="ui-section-title">Input Snapshot</div>', unsafe_allow_html=True)
-    snap_a, snap_b, snap_c, snap_d = st.columns(4)
-    snap_a.metric("RSI", round(live_df["RSI"].iloc[-1], 2))
-    snap_b.metric("MACD", round(live_df["MACD"].iloc[-1], 2))
-    snap_c.metric("ATR", round(live_df["ATR"].iloc[-1], 2))
-    snap_d.metric("OBV", round(live_df["OBV"].iloc[-1], 2))
+    render_snapshot_cards(
+        [
+            ("RSI", f"{live_df['RSI'].iloc[-1]:.2f}"),
+            ("MACD", f"{live_df['MACD'].iloc[-1]:.2f}"),
+            ("ATR", f"{live_df['ATR'].iloc[-1]:.2f}"),
+            ("OBV", f"{live_df['OBV'].iloc[-1]:,.2f}"),
+        ]
+    )
 
     if is_custom_asset:
         st.markdown(
