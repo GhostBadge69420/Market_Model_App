@@ -2363,6 +2363,21 @@ ASSETS = {
         "SBIN.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
         "AXISBANK.NS", "WIPRO.NS", "HCLTECH.NS", "TITAN.NS", "TATASTEEL.NS", "ASIANPAINT.NS"
     ],
+
+    "₿ Crypto": [
+        "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD",
+        "ADA-USD", "DOGE-USD", "AVAX-USD", "LINK-USD", "DOT-USD"
+    ],
+
+    "🛢 Commodities": [
+        "GC=F", "SI=F", "CL=F", "BZ=F", "NG=F",
+        "HG=F", "ZC=F", "ZW=F", "ZS=F", "KC=F"
+    ],
+
+    "📊 Indices": [
+        "^GSPC", "^DJI", "^IXIC", "^RUT", "^VIX",
+        "^FTSE", "^GDAXI", "^N225", "^HSI", "^BSESN"
+    ],
 }
 
 asset_workbook_available = _get_workbook_source("custom_asset_workbook_bytes", CUSTOM_ASSET_WORKBOOK, "asset")
@@ -2447,8 +2462,8 @@ if data_source == DATA_SOURCE_HISTORICAL:
     available_years = _get_financial_year_options(asset_key, custom_assets.get(asset_key, pd.DataFrame()))
     selected_year = st.sidebar.selectbox("Forecast Window", available_years)
 else:
-    category = st.sidebar.selectbox("Equity Market", list(ASSETS.keys()))
-    symbol = st.sidebar.selectbox("Equity Ticker", ASSETS[category])
+    category = st.sidebar.selectbox("Asset Market", list(ASSETS.keys()))
+    symbol = st.sidebar.selectbox("Asset Ticker", ASSETS[category])
     symbol = clean_symbol(symbol)
     display_symbol = symbol
     asset_key = symbol
@@ -2610,6 +2625,22 @@ def _normalize_live_sentiment_score(raw_score):
         return max(0.0, min(100.0, round((value + 1.0) * 50.0, 2)))
 
     return max(0.0, min(100.0, value))
+
+
+def _format_rsi_zone(rsi_value):
+    rsi_value = _safe_float(rsi_value, np.nan)
+
+    if pd.isna(rsi_value):
+        return "Unavailable", "RSI pending"
+    if rsi_value >= 70:
+        return "Overbought 🔴", f"RSI {rsi_value:.1f}"
+    if rsi_value <= 30:
+        return "Oversold 🟢", f"RSI {rsi_value:.1f}"
+    if rsi_value >= 60:
+        return "Bullish Bias 🟩", f"RSI {rsi_value:.1f}"
+    if rsi_value <= 40:
+        return "Bearish Bias 🟧", f"RSI {rsi_value:.1f}"
+    return "Balanced 🟡", f"RSI {rsi_value:.1f}"
 
 
 def get_sentiment_series(symbol, index):
@@ -3229,12 +3260,10 @@ with overview_tab:
 
     st.markdown('<div class="ui-section-kicker">Market Read</div><div class="ui-section-title">Dashboard</div>', unsafe_allow_html=True)
     dash_a, dash_b, dash_c = st.columns(3)
+    rsi_zone_label, rsi_zone_detail = _format_rsi_zone(rsi)
     dash_a.metric("Trend", dashboard_trend)
     dash_b.metric("Volatility", round(live_df["BB_Width"].iloc[-1], 3))
-    dash_c.metric(
-        "RSI Zone",
-        "Overbought 🔴" if rsi > 70 else "Oversold 🟢" if rsi < 30 else "Neutral 🟡"
-    )
+    dash_c.metric("RSI Zone", rsi_zone_label, rsi_zone_detail)
 
     sent_a, sent_b, sent_c = st.columns(3)
     sent_a.metric("Bullish 🟢", f"{round(bull,1)}%")
