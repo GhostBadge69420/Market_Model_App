@@ -23,6 +23,7 @@ if BACKEND_PATH not in sys.path:
     sys.path.append(BACKEND_PATH)
 
 from api.ml.ml_models import compare_models, compare_history_models, forecast_period_returns
+from api.ml.news import get_news
 from api.ml.research_context import RESEARCH_CONTEXT
 from api.ml.sentiment import sentiment_breakdown
 from api.sentiment.pipeline import get_news_sentiment
@@ -51,7 +52,7 @@ MAX_WORKBOOK_ENTRIES = 2000
 SAFE_MARKET_SYMBOL = re.compile(r"^[A-Z0-9.\-_=^]{1,20}$")
 SAFE_FRED_SERIES = re.compile(r"^[A-Z0-9_]{1,32}$")
 DATA_SOURCE_HISTORICAL = "Dissertation Models"
-DATA_SOURCE_MARKET_TOOLS = "Market Tools"
+DATA_SOURCE_MARKET_TOOLS = "Live Assets"
 
 
 def _sanitize_market_symbol(symbol):
@@ -2208,12 +2209,9 @@ def cached_price(sym):
 # ---------------- Django API ----------------
 def fetch_news(symbol):
     safe_symbol = _sanitize_market_symbol(symbol)
-    url = f"http://127.0.0.1:8000/api/news/{safe_symbol}/"
-
     try:
-        response = _safe_api_get(url, timeout=5)
-        return response.json()
-    except (requests.RequestException, ValueError):
+        return {"news": get_news(safe_symbol)}
+    except Exception:
         return {"news": []}
 
 
