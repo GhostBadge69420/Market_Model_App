@@ -50,6 +50,8 @@ MAX_WORKBOOK_UNCOMPRESSED_BYTES = 40 * 1024 * 1024
 MAX_WORKBOOK_ENTRIES = 2000
 SAFE_MARKET_SYMBOL = re.compile(r"^[A-Z0-9.\-_=^]{1,20}$")
 SAFE_FRED_SERIES = re.compile(r"^[A-Z0-9_]{1,32}$")
+DATA_SOURCE_HISTORICAL = "Dissertation Models"
+DATA_SOURCE_MARKET_TOOLS = "Market Tools"
 
 
 def _sanitize_market_symbol(symbol):
@@ -505,87 +507,279 @@ def render_three_market_scene(asset_name, year_label, trend_label):
 
     components.html(
         f"""
-        <div id="r3f-root" style="width:100%;height:460px;border-radius:24px;overflow:hidden;position:relative;background:
-        radial-gradient(circle at 20% 20%, rgba(0,200,255,.22), transparent 28%),
-        radial-gradient(circle at 80% 20%, rgba(255,180,0,.18), transparent 24%),
+        <div id="r3f-root" style="width:100%;height:500px;border-radius:26px;overflow:hidden;position:relative;background:
+        radial-gradient(circle at 18% 18%, rgba(69,211,255,.22), transparent 28%),
+        radial-gradient(circle at 82% 16%, rgba(255,177,92,.16), transparent 24%),
         linear-gradient(135deg, #06131c 0%, #0b0b14 52%, #16111f 100%);">
-          <div style="position:absolute;left:22px;top:18px;z-index:2;color:#f7fafc;font-family:Arial,sans-serif;">
-            <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.72;">Three.js + React Three Fiber</div>
-            <div style="font-size:28px;font-weight:700;margin-top:8px;">{asset_name}</div>
-            <div style="font-size:13px;opacity:.82;margin-top:6px;">{year_label} • {trend_label}</div>
+          <div id="vanta-layer" style="position:absolute;inset:0;z-index:0;"></div>
+          <div style="position:absolute;inset:0;z-index:1;background:
+            linear-gradient(180deg, rgba(6,19,28,0.14) 0%, rgba(6,19,28,0.54) 100%),
+            radial-gradient(circle at top left, rgba(56, 189, 248, 0.10), transparent 32%);"></div>
+          <div style="position:absolute;left:22px;right:22px;top:18px;z-index:3;color:#f7fafc;font-family:'Space Grotesk',Arial,sans-serif;">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(134,239,255,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Core Three.js</span>
+              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(196,181,253,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">React State Control</span>
+              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(251,191,36,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Vanta Motion Layer</span>
+              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(74,222,128,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Cannon Physics</span>
+            </div>
+            <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.72;">3D Market Dashboard</div>
+            <div style="font-size:30px;font-weight:700;margin-top:8px;line-height:1;">{asset_name}</div>
+            <div style="font-size:13px;opacity:.84;margin-top:7px;">{year_label} • {trend_label}</div>
+            <div style="margin-top:14px;max-width:460px;font-size:13px;line-height:1.5;color:rgba(241,245,249,.82);">
+              Compact highlights, animated depth, and physics-driven motion tuned for a sharper market terminal feel.
+            </div>
           </div>
-          <div id="scene-mount" style="width:100%;height:100%;"></div>
+          <div id="scene-mount" style="width:100%;height:100%;position:relative;z-index:2;"></div>
         </div>
 
         <script type="module">
-          import React, {{ useMemo, useRef }} from "https://esm.sh/react@18.3.1";
+          import React, {{ useEffect, useMemo, useRef, useState }} from "https://esm.sh/react@18.3.1";
           import {{ createRoot }} from "https://esm.sh/react-dom@18.3.1/client";
           import * as THREE from "https://esm.sh/three@0.169.0";
+          import * as CANNON from "https://esm.sh/cannon-es@0.20.0";
           import {{ Canvas, useFrame }} from "https://esm.sh/@react-three/fiber@8.17.10?external=react,react-dom,three";
 
-          function MarketCore() {{
-            const mesh = useRef();
-            const ring = useRef();
+          window.THREE = THREE;
+
+          function loadScript(src) {{
+            return new Promise((resolve, reject) => {{
+              const existing = document.querySelector(`script[data-src="${{src}}"]`);
+              if (existing) {{
+                if (existing.dataset.loaded === "true") {{
+                  resolve();
+                  return;
+                }}
+                existing.addEventListener("load", resolve, {{ once: true }});
+                existing.addEventListener("error", reject, {{ once: true }});
+                return;
+              }}
+
+              const script = document.createElement("script");
+              script.src = src;
+              script.async = true;
+              script.dataset.src = src;
+              script.addEventListener("load", () => {{
+                script.dataset.loaded = "true";
+                resolve();
+              }}, {{ once: true }});
+              script.addEventListener("error", reject, {{ once: true }});
+              document.head.appendChild(script);
+            }});
+          }}
+
+          async function mountVanta() {{
+            await loadScript("https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js");
+            if (!window.VANTA || window.__rupatchiVanta) return;
+
+            window.__rupatchiVanta = window.VANTA.NET({{
+              el: "#vanta-layer",
+              mouseControls: true,
+              touchControls: true,
+              gyroControls: false,
+              minHeight: 500,
+              minWidth: 200,
+              scale: 1,
+              scaleMobile: 1,
+              color: 0x46d7ff,
+              backgroundColor: 0x07111a,
+              points: 10,
+              maxDistance: 20,
+              spacing: 15,
+              showDots: false
+            }});
+          }}
+
+          function PhysicsField() {{
             const group = useRef();
+            const halo = useRef();
+            const barGroup = useRef();
+            const bodyRefs = useRef([]);
+            const meshRefs = useRef([]);
+            const worldRef = useRef(null);
+            const pulseRef = useRef(0);
+            const [, setPhase] = useState(0);
 
             const particles = useMemo(() => {{
               const points = [];
-              for (let i = 0; i < 120; i += 1) {{
-                const radius = 2.8 + Math.random() * 2.1;
+              for (let i = 0; i < 140; i += 1) {{
+                const radius = 3.2 + Math.random() * 2.4;
                 const angle = Math.random() * Math.PI * 2;
-                const height = (Math.random() - 0.5) * 2.8;
-                points.push(
-                  Math.cos(angle) * radius,
-                  height,
-                  Math.sin(angle) * radius
-                );
+                const height = (Math.random() - 0.5) * 3.2;
+                points.push(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
               }}
               return new Float32Array(points);
             }}, []);
 
-            useFrame((state) => {{
+            const orbs = useMemo(() => ([
+              ["#7dd3fc", 0.18, [-1.6, 2.4, 0.1]],
+              ["#f9a8d4", 0.22, [-0.7, 3.2, 0.4]],
+              ["#fde68a", 0.17, [0.2, 2.8, -0.1]],
+              ["#93c5fd", 0.20, [1.0, 3.4, 0.2]],
+              ["#86efac", 0.16, [1.8, 2.6, -0.3]],
+              ["#c4b5fd", 0.19, [0.5, 4.0, 0.45]],
+            ]), []);
+
+            useEffect(() => {{
+              const world = new CANNON.World({{
+                gravity: new CANNON.Vec3(0, -5.4, 0)
+              }});
+              world.broadphase = new CANNON.NaiveBroadphase();
+              world.allowSleep = true;
+              world.defaultContactMaterial.friction = 0.06;
+              world.defaultContactMaterial.restitution = 0.86;
+
+              const floor = new CANNON.Body({{ type: CANNON.Body.STATIC, shape: new CANNON.Plane() }});
+              floor.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+              floor.position.set(0, -1.7, 0);
+              world.addBody(floor);
+
+              const leftWall = new CANNON.Body({{ type: CANNON.Body.STATIC, shape: new CANNON.Plane() }});
+              leftWall.quaternion.setFromEuler(0, Math.PI / 2, 0);
+              leftWall.position.set(-2.6, 0, 0);
+              world.addBody(leftWall);
+
+              const rightWall = new CANNON.Body({{ type: CANNON.Body.STATIC, shape: new CANNON.Plane() }});
+              rightWall.quaternion.setFromEuler(0, -Math.PI / 2, 0);
+              rightWall.position.set(2.6, 0, 0);
+              world.addBody(rightWall);
+
+              bodyRefs.current = orbs.map(([, radius, position]) => {{
+                const body = new CANNON.Body({{
+                  mass: 0.35,
+                  shape: new CANNON.Sphere(radius),
+                  position: new CANNON.Vec3(...position),
+                  linearDamping: 0.14,
+                  angularDamping: 0.22
+                }});
+                body.velocity.set((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.2);
+                world.addBody(body);
+                return body;
+              }});
+
+              worldRef.current = world;
+              const phaseTimer = window.setInterval(() => {{
+                pulseRef.current = (pulseRef.current + 1) % 3;
+                setPhase((value) => (value + 1) % 3);
+              }}, 1800);
+
+              return () => {{
+                window.clearInterval(phaseTimer);
+                worldRef.current = null;
+                bodyRefs.current = [];
+                meshRefs.current = [];
+              }};
+            }}, [orbs]);
+
+            useFrame((state, delta) => {{
+              const world = worldRef.current;
+              if (!world) return;
+
+              world.step(1 / 60, delta, 3);
               const t = state.clock.getElapsedTime();
-              mesh.current.rotation.x = Math.sin(t * 0.55) * 0.3;
-              mesh.current.rotation.y += 0.012;
-              ring.current.rotation.z -= 0.01;
-              ring.current.rotation.x = Math.sin(t * 0.35) * 0.45;
-              group.current.rotation.y = Math.sin(t * 0.18) * 0.3;
+
+              bodyRefs.current.forEach((body, index) => {{
+                body.applyForce(
+                  new CANNON.Vec3(Math.sin(t * 0.9 + index) * 0.12, 0, Math.cos(t * 0.8 + index) * 0.06),
+                  body.position
+                );
+
+                const mesh = meshRefs.current[index];
+                if (mesh) {{
+                  mesh.position.copy(body.position);
+                  mesh.quaternion.copy(body.quaternion);
+                }}
+              }});
+
+              if (group.current) group.current.rotation.y = Math.sin(t * 0.18) * 0.22;
+              if (halo.current) {{
+                halo.current.rotation.z -= 0.004;
+                halo.current.rotation.x = 1.02 + Math.sin(t * 0.45) * 0.12;
+              }}
+              if (barGroup.current) {{
+                barGroup.current.children.forEach((bar, index) => {{
+                  bar.scale.y = 0.82 + Math.sin(t * 1.55 + index * 0.48 + pulseRef.current) * 0.30;
+                }});
+              }}
             }});
 
             return React.createElement(
               "group",
-              {{ ref: group }},
-              React.createElement("ambientLight", {{ intensity: 1.35 }}),
-              React.createElement("directionalLight", {{ position: [4, 4, 2], intensity: 2.2, color: "#7dd3fc" }}),
-              React.createElement("directionalLight", {{ position: [-3, -2, 4], intensity: 1.8, color: "#f59e0b" }}),
+              {{ ref: group, position: [0.2, 0.12, 0] }},
+              React.createElement("ambientLight", {{ intensity: 1.15 }}),
+              React.createElement("directionalLight", {{ position: [4, 4, 3], intensity: 2.05, color: "#7dd3fc" }}),
+              React.createElement("directionalLight", {{ position: [-3, -1, 4], intensity: 1.3, color: "#f9a8d4" }}),
               React.createElement(
                 "mesh",
-                {{ ref: mesh, position: [0, 0, 0] }},
-                React.createElement("icosahedronGeometry", {{ args: [1.25, 1] }}),
+                {{ rotation: [-Math.PI / 2, 0, 0], position: [0, -1.72, 0] }},
+                React.createElement("planeGeometry", {{ args: [7.8, 4.6, 1, 1] }}),
                 React.createElement("meshStandardMaterial", {{
-                  color: "#7dd3fc",
-                  emissive: "#0ea5e9",
-                  emissiveIntensity: 0.5,
-                  metalness: 0.55,
-                  roughness: 0.18,
-                  wireframe: false
+                  color: "#08131d",
+                  transparent: true,
+                  opacity: 0.72,
+                  metalness: 0.48,
+                  roughness: 0.24
                 }})
               ),
               React.createElement(
                 "mesh",
-                {{ ref: ring, rotation: [1.1, 0.2, 0.5] }},
-                React.createElement("torusGeometry", {{ args: [2.35, 0.06, 20, 160] }}),
+                {{ ref: halo, rotation: [1.04, 0.2, 0.55], position: [0, 0.2, -0.55] }},
+                React.createElement("torusGeometry", {{ args: [2.18, 0.05, 20, 160] }}),
                 React.createElement("meshStandardMaterial", {{
                   color: "#f8fafc",
-                  emissive: "#f8fafc",
-                  emissiveIntensity: 0.25,
-                  metalness: 0.8,
-                  roughness: 0.22
+                  emissive: "#67e8f9",
+                  emissiveIntensity: 0.48,
+                  metalness: 0.88,
+                  roughness: 0.14
                 }})
+              ),
+              React.createElement(
+                "group",
+                {{ ref: barGroup, position: [0, -0.95, -0.45] }},
+                ...Array.from({{ length: 12 }}, (_, index) =>
+                  React.createElement(
+                    "mesh",
+                    {{
+                      key: index,
+                      position: [-2.15 + index * 0.39, 0, 0]
+                    }},
+                    React.createElement("boxGeometry", {{ args: [0.16, 0.85 + (index % 4) * 0.18, 0.16] }}),
+                    React.createElement("meshPhysicalMaterial", {{
+                      color: index % 2 === 0 ? "#46d7ff" : "#ff7ac6",
+                      emissive: index % 2 === 0 ? "#22c7ff" : "#ff4fad",
+                      emissiveIntensity: 0.42,
+                      metalness: 0.92,
+                      roughness: 0.18,
+                      transparent: true,
+                      opacity: 0.84
+                    }})
+                  )
+                )
+              ),
+              ...orbs.map(([color, radius], index) =>
+                React.createElement(
+                  "mesh",
+                  {{
+                    key: `orb-${{index}}`,
+                    ref: (node) => {{
+                      if (node) meshRefs.current[index] = node;
+                    }}
+                  }},
+                  React.createElement("sphereGeometry", {{ args: [radius, 28, 28] }}),
+                  React.createElement("meshPhysicalMaterial", {{
+                    color,
+                    emissive: color,
+                    emissiveIntensity: 0.42,
+                    transparent: true,
+                    opacity: 0.92,
+                    roughness: 0.12,
+                    metalness: 0.55,
+                    transmission: 0.14
+                  }})
+                )
               ),
               React.createElement(
                 "points",
-                null,
+                {{ position: [0, 0.25, -0.8] }},
                 React.createElement("bufferGeometry", null,
                   React.createElement("bufferAttribute", {{
                     attach: "attributes-position",
@@ -605,14 +799,20 @@ def render_three_market_scene(asset_name, year_label, trend_label):
           }}
 
           function App() {{
+            const [ready, setReady] = useState(false);
+
+            useEffect(() => {{
+              mountVanta().finally(() => setReady(true));
+            }}, []);
+
             return React.createElement(
               Canvas,
               {{
-                camera: {{ position: [0, 0, 5.8], fov: 46 }},
+                camera: {{ position: [0, 0.1, 5.7], fov: 42 }},
                 dpr: [1, 2]
               }},
               React.createElement("fog", {{ attach: "fog", args: ["#06131c", 5, 10] }}),
-              React.createElement(MarketCore)
+              ready ? React.createElement(PhysicsField) : null
             );
           }}
 
@@ -620,7 +820,7 @@ def render_three_market_scene(asset_name, year_label, trend_label):
           createRoot(mountNode).render(React.createElement(App));
         </script>
         """,
-        height=460,
+        height=500,
     )
 
 
@@ -1277,16 +1477,16 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .terminal-metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-    margin: 0.35rem 0 1.2rem;
+    gap: 0.85rem;
+    margin: 0.3rem 0 1rem;
 }
 
 .terminal-metric-card {
     position: relative;
     overflow: hidden;
-    min-height: 188px;
-    border-radius: 22px;
-    padding: 1rem 1rem 0.95rem;
+    min-height: 154px;
+    border-radius: 20px;
+    padding: 0.82rem 0.88rem 0.8rem;
     background:
         linear-gradient(155deg, rgba(20, 13, 35, 0.90), rgba(9, 10, 20, 0.74)),
         radial-gradient(circle at top right, rgba(70, 215, 255, 0.22), transparent 34%),
@@ -1350,20 +1550,20 @@ button[data-baseweb="tab"][aria-selected="true"] {
     color: var(--terminal-dim);
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    font-size: 0.68rem;
-    margin-bottom: 0.75rem;
+    font-size: 0.64rem;
+    margin-bottom: 0.6rem;
 }
 
 .terminal-metric-value {
     font-family: "Space Grotesk", sans-serif;
-    font-size: 2rem;
+    font-size: 1.62rem;
     line-height: 1;
     color: #f8fbff;
 }
 
 .terminal-metric-delta {
-    margin-top: 0.55rem;
-    font-size: 0.9rem;
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
     color: #9dd7ff;
 }
 
@@ -1376,23 +1576,24 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 .terminal-metric-subtext {
-    margin-top: 0.65rem;
+    margin-top: 0.5rem;
     color: #c6d4e1;
-    font-size: 0.84rem;
-    min-height: 2.5rem;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    min-height: 2.1rem;
 }
 
 .terminal-action-cluster {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.85rem;
+    gap: 0.35rem;
+    margin-top: 0.7rem;
 }
 
 .terminal-action-chip {
-    padding: 0.38rem 0.65rem;
+    padding: 0.28rem 0.52rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     letter-spacing: 0.06em;
     color: #91a6bb;
     background: rgba(12, 19, 29, 0.72);
@@ -1427,20 +1628,20 @@ button[data-baseweb="tab"][aria-selected="true"] {
     display: flex;
     justify-content: space-between;
     gap: 0.75rem;
-    margin-top: 0.8rem;
-    font-size: 0.88rem;
+    margin-top: 0.65rem;
+    font-size: 0.76rem;
 }
 
 .terminal-sentiment-stat strong {
     display: block;
     font-family: "Space Grotesk", sans-serif;
-    font-size: 1.15rem;
+    font-size: 1rem;
     color: #f8fbff;
 }
 
 .terminal-progress {
-    margin-top: 0.9rem;
-    height: 8px;
+    margin-top: 0.7rem;
+    height: 7px;
     border-radius: 999px;
     background: rgba(148, 163, 184, 0.15);
     overflow: hidden;
@@ -1555,7 +1756,7 @@ def get_cached_sentiment(symbol):
 
 @st.cache_data(ttl=900)
 def get_cached_model_results(asset_key, source, year_label="All Years"):
-    if source == "Dissertation Models":
+    if source == DATA_SOURCE_HISTORICAL:
         asset_df = get_custom_asset_data_map().get(asset_key, pd.DataFrame())
         asset_df = _filter_data_by_financial_year(asset_df, year_label)
         return compare_history_models(asset_df, asset_key)
@@ -1693,7 +1894,7 @@ ASSETS = {
     ],
 }
 
-st.sidebar.title("Data Source")
+st.sidebar.title("Market Tools")
 asset_workbook_available = _get_workbook_source("custom_asset_workbook_bytes", CUSTOM_ASSET_WORKBOOK, "asset")
 summary_workbook_available = _get_workbook_source("custom_summary_workbook_bytes", CUSTOM_SUMMARY_WORKBOOK, "summary")
 
@@ -1740,11 +1941,11 @@ if not has_asset_workbook or not has_summary_workbook:
             except ValueError as exc:
                 st.error(str(exc))
 
-data_source = st.sidebar.selectbox("Data Source", ["Dissertation Models", "Live Market"])
+data_source = st.sidebar.selectbox("Workspace Mode", [DATA_SOURCE_HISTORICAL, DATA_SOURCE_MARKET_TOOLS])
 
 custom_assets = get_custom_asset_data_map()
 
-if data_source == "Dissertation Models":
+if data_source == DATA_SOURCE_HISTORICAL:
     custom_asset_names = sorted(custom_assets.keys())
     if not custom_asset_names:
         st.warning("Dissertation Models needs your workbook files before it can load any asset sheets.")
@@ -1792,7 +1993,7 @@ chart_type = st.sidebar.selectbox(
 # -------------------- DATA --------------------
 @st.cache_data(ttl=300)
 def load_data(asset_key, source):
-    if source == "Dissertation Models":
+    if source == DATA_SOURCE_HISTORICAL:
         return get_custom_asset_data_map().get(asset_key, pd.DataFrame()).copy()
 
     symbol = clean_symbol(asset_key)
@@ -2318,13 +2519,15 @@ def render_historical_terminal_header_metrics(metrics):
 title_suffix = f" ({selected_year})" if is_custom_asset and selected_year != "All Years" else ""
 st.title(f"📈 RUPATCHI MODEL — {display_symbol}{title_suffix}")
 st.caption(
-    "Equity forecasting workspace combining price action, technical structure, sentiment, macro context, and model comparison."
+    "Market tools workspace blending compact signals, price structure, sentiment, macro context, and model comparison."
 )
 
 research_context = get_research_context()
 
 signal, trend, sentiment, rsi = analyze_asset(data.copy())
 currency = "₹" if is_custom_asset or ".NS" in symbol or ".BO" in symbol else "$"
+hero_window = selected_year if is_custom_asset else DATA_SOURCE_MARKET_TOOLS
+render_three_market_scene(display_symbol, hero_window, trend)
 if is_custom_asset:
     custom_asset_summary = build_custom_asset_summary(asset_key)
     historical_header_metrics = build_historical_header_metrics(
