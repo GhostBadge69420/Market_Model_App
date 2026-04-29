@@ -2362,26 +2362,6 @@ ASSETS = {
     ],
 }
 
-st.sidebar.markdown(
-    """
-    <div class="sidebar-hero">
-        <div class="sidebar-hero-kicker">Touch Console</div>
-        <div class="sidebar-hero-title">Market Tools</div>
-        <div class="sidebar-hero-copy">A tactile control deck for market mode, forecast range, and chart behavior across desktop and touch screens.</div>
-        <div class="sidebar-orbit-row">
-            <span class="sidebar-orbit-node"></span>
-            <span class="sidebar-orbit-node"></span>
-            <span class="sidebar-orbit-node"></span>
-            <span class="sidebar-orbit-label">Interactive UI Layer</span>
-        </div>
-    </div>
-    <div class="sidebar-deck">
-        <div class="sidebar-deck-kicker">Control Deck</div>
-        <div class="sidebar-deck-copy">Choose your workspace, time horizon, and chart surface with touch-friendly 3D panels.</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 asset_workbook_available = _get_workbook_source("custom_asset_workbook_bytes", CUSTOM_ASSET_WORKBOOK, "asset")
 summary_workbook_available = _get_workbook_source("custom_summary_workbook_bytes", CUSTOM_SUMMARY_WORKBOOK, "summary")
 
