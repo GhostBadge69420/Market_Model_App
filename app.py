@@ -460,7 +460,42 @@ def _prepare_summary_display(df):
         ],
     ]
 
-    return display_df.fillna("—")
+    placeholder_values = {"": np.nan, "-": np.nan, "—": np.nan, "nan": np.nan, "None": np.nan}
+    numeric_keywords = (
+        "forecast",
+        "return",
+        "score",
+        "price",
+        "pct",
+        "percent",
+        "probability",
+        "value",
+        "amount",
+        "ratio",
+        "volatility",
+    )
+
+    for column_name in display_df.columns:
+        column = display_df[column_name]
+
+        if pd.api.types.is_numeric_dtype(column):
+            continue
+
+        normalized = column.replace(placeholder_values)
+        numeric_candidate = pd.to_numeric(normalized, errors="coerce")
+        normalized_name = str(column_name).strip().lower()
+        should_cast_numeric = any(keyword in normalized_name for keyword in numeric_keywords)
+
+        if (
+            should_cast_numeric
+            and normalized.notna().sum() > 0
+            and numeric_candidate.notna().sum() == normalized.notna().sum()
+        ):
+            display_df[column_name] = numeric_candidate
+        else:
+            display_df[column_name] = normalized.fillna("—")
+
+    return display_df
 
 
 def render_three_market_scene(asset_name, year_label, trend_label):
@@ -1059,7 +1094,13 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
     border-right: 1px solid rgba(150, 118, 255, 0.16);
 }
 
-[data-testid="stSidebar"] * {
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+[data-testid="stSidebar"] [data-testid="stSidebarHeader"],
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea,
+[data-testid="stSidebar"] select,
+[data-testid="stSidebar"] [data-baseweb="select"] {
     font-family: "IBM Plex Mono", monospace !important;
 }
 
