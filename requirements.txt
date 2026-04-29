@@ -1,0 +1,15 @@
+streamlit
+yfinance
+pandas
+numpy
+plotly
+requests
+matplotlib
+seaborn
+cryptography
+scikit-learn
+statsmodels
+vaderSentiment
+transformers
+torch
+joblib
