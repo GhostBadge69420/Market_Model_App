@@ -521,13 +521,13 @@ def render_three_market_scene(asset_name, year_label, trend_label):
         <script>
           const overlayNode = document.getElementById("hero-overlay");
           const canvas = document.getElementById("market-canvas");
-          const ctx = canvas.getContext("2d");
           const pulses = [
             "Scanning live motion field",
             "Balancing collision particles",
             "Refreshing dashboard energy"
           ];
           let pulseIndex = 0;
+          const prefersStaticScene = window.matchMedia("(max-width: 900px), (prefers-reduced-motion: reduce)").matches;
 
           overlayNode.innerHTML = `
             <div style="color:#dcfce7;font-family:'Space Grotesk',Arial,sans-serif;">
@@ -546,61 +546,66 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             if (pulseLabel) pulseLabel.textContent = pulses[pulseIndex];
           }}, 1800);
 
-          const state = {{
-            bars: Array.from({{ length: 14 }}, (_, i) => ({{
-              x: 80 + i * 34,
-              width: 18,
-              base: 0.8 + (i % 5) * 0.12,
-              phase: i * 0.45,
-              color: i % 2 === 0 ? "#46d7ff" : "#ff7ac6"
-            }})),
-            orbs: Array.from({{ length: 7 }}, (_, i) => ({{
-              x: 180 + i * 44,
-              y: 120 + (i % 3) * 28,
-              z: 0.5 + (i % 4) * 0.18,
-              vx: (Math.random() - 0.5) * 1.7,
-              vy: 0.8 + Math.random() * 1.1,
-              radius: 10 + (i % 3) * 4,
-              color: ["#7dd3fc", "#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#67e8f9"][i]
-            }})),
-            particles: Array.from({{ length: 48 }}, () => ({{
-              angle: Math.random() * Math.PI * 2,
-              radius: 120 + Math.random() * 180,
-              speed: 0.0015 + Math.random() * 0.0025,
-              y: -40 + Math.random() * 220,
-              size: 1 + Math.random() * 2.5
-            }}))
-          }};
+          if (prefersStaticScene) {{
+            canvas.remove();
+          }} else {{
+            const ctx = canvas.getContext("2d");
 
-          function resize() {{
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-            canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          }}
+            const state = {{
+              bars: Array.from({{ length: 14 }}, (_, i) => ({{
+                x: 80 + i * 34,
+                width: 18,
+                base: 0.8 + (i % 5) * 0.12,
+                phase: i * 0.45,
+                color: i % 2 === 0 ? "#46d7ff" : "#ff7ac6"
+              }})),
+              orbs: Array.from({{ length: 7 }}, (_, i) => ({{
+                x: 180 + i * 44,
+                y: 120 + (i % 3) * 28,
+                z: 0.5 + (i % 4) * 0.18,
+                vx: (Math.random() - 0.5) * 1.7,
+                vy: 0.8 + Math.random() * 1.1,
+                radius: 10 + (i % 3) * 4,
+                color: ["#7dd3fc", "#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#67e8f9"][i]
+              }})),
+              particles: Array.from({{ length: 48 }}, () => ({{
+                angle: Math.random() * Math.PI * 2,
+                radius: 120 + Math.random() * 180,
+                speed: 0.0015 + Math.random() * 0.0025,
+                y: -40 + Math.random() * 220,
+                size: 1 + Math.random() * 2.5
+              }}))
+            }};
 
-          function animate(now) {{
-            const t = now * 0.001;
-            const width = canvas.getBoundingClientRect().width;
-            const height = canvas.getBoundingClientRect().height;
-            const floorY = height * 0.78;
-            const centerX = width * 0.67;
-            const centerY = height * 0.5;
+            function resize() {{
+              const dpr = Math.min(window.devicePixelRatio || 1, 2);
+              const rect = canvas.getBoundingClientRect();
+              canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+              canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+              ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }}
 
-            ctx.clearRect(0, 0, width, height);
+            function animate(now) {{
+              const t = now * 0.001;
+              const width = canvas.getBoundingClientRect().width;
+              const height = canvas.getBoundingClientRect().height;
+              const floorY = height * 0.78;
+              const centerX = width * 0.67;
+              const centerY = height * 0.5;
 
-            const bg = ctx.createLinearGradient(0, 0, 0, height);
-            bg.addColorStop(0, "rgba(0, 18, 12, 0.24)");
-            bg.addColorStop(1, "rgba(0, 8, 6, 0.04)");
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, width, height);
+              ctx.clearRect(0, 0, width, height);
 
-            const haze = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.38);
-            haze.addColorStop(0, "rgba(16, 255, 163, 0.12)");
-            haze.addColorStop(1, "rgba(0,0,0,0)");
-            ctx.fillStyle = haze;
-            ctx.fillRect(0, 0, width, height);
+              const bg = ctx.createLinearGradient(0, 0, 0, height);
+              bg.addColorStop(0, "rgba(0, 18, 12, 0.24)");
+              bg.addColorStop(1, "rgba(0, 8, 6, 0.04)");
+              ctx.fillStyle = bg;
+              ctx.fillRect(0, 0, width, height);
+
+              const haze = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.38);
+              haze.addColorStop(0, "rgba(16, 255, 163, 0.12)");
+              haze.addColorStop(1, "rgba(0,0,0,0)");
+              ctx.fillStyle = haze;
+              ctx.fillRect(0, 0, width, height);
 
             for (const particle of state.particles) {{
               particle.angle += particle.speed * 18;
@@ -699,12 +704,13 @@ def render_three_market_scene(asset_name, year_label, trend_label):
             ctx.fillStyle = horizon;
             ctx.fillRect(width * 0.36, floorY - 18, width * 0.6, 60);
 
+              window.requestAnimationFrame(animate);
+            }}
+
+            window.addEventListener("resize", resize);
+            resize();
             window.requestAnimationFrame(animate);
           }}
-
-          window.addEventListener("resize", resize);
-          resize();
-          window.requestAnimationFrame(animate);
         </script>
         """,
         height=500,
@@ -716,47 +722,55 @@ def render_terminal_background():
         """
         <div id="terminal-bg-root" style="position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;"></div>
         <script type="module">
-          import * as THREE from "https://esm.sh/three@0.169.0";
-
           const mount = document.getElementById("terminal-bg-root");
-          const scene = new THREE.Scene();
-          scene.fog = new THREE.FogExp2("#03110d", 0.045);
+          const prefersStaticBackground = window.matchMedia("(max-width: 900px), (prefers-reduced-motion: reduce)").matches;
 
-          const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
-          camera.position.set(0, 0.45, 8.8);
+          if (prefersStaticBackground) {
+            mount.style.background = `
+              radial-gradient(circle at top right, rgba(16, 255, 163, 0.10), transparent 22%),
+              radial-gradient(circle at 18% 16%, rgba(110, 231, 183, 0.08), transparent 18%),
+              linear-gradient(180deg, rgba(2, 7, 6, 0.10) 0%, rgba(4, 18, 14, 0.18) 48%, rgba(3, 10, 8, 0.16) 100%)
+            `;
+          } else {
+            const THREE = await import("https://esm.sh/three@0.169.0");
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2("#03110d", 0.045);
 
-          const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          renderer.outputColorSpace = THREE.SRGBColorSpace;
-          mount.appendChild(renderer.domElement);
+            const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 0.45, 8.8);
 
-          const ambient = new THREE.AmbientLight("#a7f3d0", 0.88);
-          const keyLight = new THREE.DirectionalLight("#34d399", 1.55);
-          keyLight.position.set(5, 6, 7);
-          const rimLight = new THREE.DirectionalLight("#22c55e", 1.3);
-          rimLight.position.set(-4, 2, 5);
-          scene.add(ambient, keyLight, rimLight);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            mount.appendChild(renderer.domElement);
 
-          const uniforms = {
-            uTime: { value: 0 },
-            uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-          };
+            const ambient = new THREE.AmbientLight("#a7f3d0", 0.88);
+            const keyLight = new THREE.DirectionalLight("#34d399", 1.55);
+            keyLight.position.set(5, 6, 7);
+            const rimLight = new THREE.DirectionalLight("#22c55e", 1.3);
+            rimLight.position.set(-4, 2, 5);
+            scene.add(ambient, keyLight, rimLight);
 
-          const backgroundPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(24, 14, 1, 1),
-            new THREE.ShaderMaterial({
-              uniforms,
-              transparent: true,
-              depthWrite: false,
-              vertexShader: `
+            const uniforms = {
+              uTime: { value: 0 },
+              uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            };
+
+            const backgroundPlane = new THREE.Mesh(
+              new THREE.PlaneGeometry(24, 14, 1, 1),
+              new THREE.ShaderMaterial({
+                uniforms,
+                transparent: true,
+                depthWrite: false,
+                vertexShader: `
                 varying vec2 vUv;
                 void main() {
                   vUv = uv;
                   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
               `,
-              fragmentShader: `
+                fragmentShader: `
                 precision highp float;
                 varying vec2 vUv;
                 uniform float uTime;
@@ -801,18 +815,18 @@ def render_terminal_background():
                   gl_FragColor = vec4(color, alpha);
                 }
               `
-            })
-          );
-          backgroundPlane.position.set(0, 0.15, -6.5);
-          scene.add(backgroundPlane);
+              })
+            );
+            backgroundPlane.position.set(0, 0.15, -6.5);
+            scene.add(backgroundPlane);
 
-          const orb = new THREE.Mesh(
-            new THREE.IcosahedronGeometry(1.42, 24),
-            new THREE.ShaderMaterial({
-              uniforms,
-              transparent: true,
-              wireframe: false,
-              vertexShader: `
+            const orb = new THREE.Mesh(
+              new THREE.IcosahedronGeometry(1.42, 18),
+              new THREE.ShaderMaterial({
+                uniforms,
+                transparent: true,
+                wireframe: false,
+                vertexShader: `
                 uniform float uTime;
                 varying vec3 vNormal;
                 varying vec3 vPosition;
@@ -840,12 +854,12 @@ def render_terminal_background():
                   gl_FragColor = vec4(color * (0.72 + pulse * 0.35), 0.92);
                 }
               `
-            })
-          );
-          orb.position.set(0.45, 0.8, -0.65);
-          scene.add(orb);
+              })
+            );
+            orb.position.set(0.45, 0.8, -0.65);
+            scene.add(orb);
 
-          const haloA = new THREE.Mesh(
+            const haloA = new THREE.Mesh(
             new THREE.TorusGeometry(3.45, 0.055, 32, 220),
             new THREE.MeshPhysicalMaterial({
               color: "#34d399",
@@ -856,12 +870,12 @@ def render_terminal_background():
               roughness: 0.12,
               metalness: 0.92
             })
-          );
-          haloA.rotation.set(1.05, 0.15, 0.28);
-          haloA.position.set(0.35, 0.55, -0.55);
-          scene.add(haloA);
+            );
+            haloA.rotation.set(1.05, 0.15, 0.28);
+            haloA.position.set(0.35, 0.55, -0.55);
+            scene.add(haloA);
 
-          const haloB = new THREE.Mesh(
+            const haloB = new THREE.Mesh(
             new THREE.TorusGeometry(2.4, 0.03, 24, 180),
             new THREE.MeshPhysicalMaterial({
               color: "#86efac",
@@ -872,12 +886,12 @@ def render_terminal_background():
               roughness: 0.16,
               metalness: 0.94
             })
-          );
-          haloB.rotation.set(1.12, 0.3, 1.08);
-          haloB.position.set(0.35, 0.55, -0.55);
-          scene.add(haloB);
+            );
+            haloB.rotation.set(1.12, 0.3, 1.08);
+            haloB.position.set(0.35, 0.55, -0.55);
+            scene.add(haloB);
 
-          const floorMaterial = new THREE.ShaderMaterial({
+            const floorMaterial = new THREE.ShaderMaterial({
             uniforms,
             transparent: true,
             side: THREE.DoubleSide,
@@ -905,20 +919,20 @@ def render_terminal_background():
                 gl_FragColor = vec4(color, (0.18 + line * 0.22) * fade);
               }
             `
-          });
+            });
 
-          const floor = new THREE.Mesh(
+            const floor = new THREE.Mesh(
             new THREE.PlaneGeometry(30, 18, 100, 100),
             floorMaterial
-          );
-          floor.rotation.x = -Math.PI / 2;
-          floor.position.set(0, -2.55, -0.8);
-          scene.add(floor);
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(0, -2.55, -0.8);
+            scene.add(floor);
 
-          const particleCount = 1500;
-          const positions = new Float32Array(particleCount * 3);
-          const scales = new Float32Array(particleCount);
-          for (let i = 0; i < particleCount; i += 1) {
+            const particleCount = 900;
+            const positions = new Float32Array(particleCount * 3);
+            const scales = new Float32Array(particleCount);
+            for (let i = 0; i < particleCount; i += 1) {
             const i3 = i * 3;
             const radius = 2.4 + Math.random() * 5.8;
             const angle = Math.random() * Math.PI * 2.0;
@@ -926,13 +940,13 @@ def render_terminal_background():
             positions[i3 + 1] = (Math.random() - 0.5) * 6.5;
             positions[i3 + 2] = Math.sin(angle) * radius - 1.4;
             scales[i] = 0.45 + Math.random() * 1.3;
-          }
+            }
 
-          const particlesGeometry = new THREE.BufferGeometry();
-          particlesGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-          particlesGeometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
+            const particlesGeometry = new THREE.BufferGeometry();
+            particlesGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+            particlesGeometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
 
-          const particles = new THREE.Points(
+            const particles = new THREE.Points(
             particlesGeometry,
             new THREE.ShaderMaterial({
               uniforms,
@@ -967,20 +981,20 @@ def render_terminal_background():
                 }
               `
             })
-          );
-          scene.add(particles);
+            );
+            scene.add(particles);
 
-          const petalCount = 42;
-          const petalGeometry = new THREE.PlaneGeometry(0.12, 0.18, 1, 1);
-          const petalMaterial = new THREE.MeshBasicMaterial({
+            const petalCount = 24;
+            const petalGeometry = new THREE.PlaneGeometry(0.12, 0.18, 1, 1);
+            const petalMaterial = new THREE.MeshBasicMaterial({
             color: "#bbf7d0",
             transparent: true,
             opacity: 0.32,
             side: THREE.DoubleSide,
             depthWrite: false
-          });
-          const petals = [];
-          for (let i = 0; i < petalCount; i += 1) {
+            });
+            const petals = [];
+            for (let i = 0; i < petalCount; i += 1) {
             const petal = new THREE.Mesh(petalGeometry, petalMaterial.clone());
             petal.position.set(
               (Math.random() - 0.5) * 13,
@@ -995,10 +1009,10 @@ def render_terminal_background():
             };
             petals.push(petal);
             scene.add(petal);
-          }
+            }
 
-          const bars = [];
-          for (let i = 0; i < 18; i += 1) {
+            const bars = [];
+            for (let i = 0; i < 18; i += 1) {
             const height = 0.85 + ((i * 17) % 7) * 0.22;
             const geometry = new THREE.BoxGeometry(0.18, height, 0.18);
             const material = new THREE.MeshPhysicalMaterial({
@@ -1014,14 +1028,14 @@ def render_terminal_background():
             bar.position.set(-4.8 + i * 0.58, -1.8 + Math.sin(i * 0.72) * 0.15, -1.1 + (i % 4) * 0.12);
             bars.push(bar);
             scene.add(bar);
-          }
+            }
 
-          const clock = new THREE.Clock();
-          let rafId = null;
+            const clock = new THREE.Clock();
+            let rafId = null;
 
-          function animate() {
-            const t = clock.getElapsedTime();
-            uniforms.uTime.value = t;
+            function animate() {
+              const t = clock.getElapsedTime();
+              uniforms.uTime.value = t;
 
             orb.rotation.x = Math.sin(t * 0.42) * 0.28;
             orb.rotation.y += 0.0065;
@@ -1051,26 +1065,27 @@ def render_terminal_background():
             camera.position.y = 0.45 + Math.cos(t * 0.16) * 0.18;
             camera.lookAt(0.2, 0.15, -0.8);
 
-            renderer.render(scene, camera);
-            rafId = requestAnimationFrame(animate);
+              renderer.render(scene, camera);
+              rafId = requestAnimationFrame(animate);
+            }
+
+            function onResize() {
+              camera.aspect = window.innerWidth / window.innerHeight;
+              camera.updateProjectionMatrix();
+              renderer.setSize(window.innerWidth, window.innerHeight);
+              renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+              uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+            }
+
+            window.addEventListener("resize", onResize);
+            animate();
+
+            window.addEventListener("beforeunload", () => {
+              if (rafId) cancelAnimationFrame(rafId);
+              window.removeEventListener("resize", onResize);
+              renderer.dispose();
+            });
           }
-
-          function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-            uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
-          }
-
-          window.addEventListener("resize", onResize);
-          animate();
-
-          window.addEventListener("beforeunload", () => {
-            if (rafId) cancelAnimationFrame(rafId);
-            window.removeEventListener("resize", onResize);
-            renderer.dispose();
-          });
         </script>
         """,
         height=0,
