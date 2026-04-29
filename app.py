@@ -3069,9 +3069,6 @@ def render_tab_3d_hero(kicker, title, copy):
 
 title_suffix = f" ({selected_year})" if is_custom_asset and selected_year != "All Years" else ""
 st.title(f"📈 RUPATCHI MODEL — {display_symbol}{title_suffix}")
-st.caption(
-    "Market tools workspace blending compact signals, price structure, sentiment, macro context, and model comparison."
-)
 
 research_context = get_research_context()
 
