@@ -2671,21 +2671,18 @@ def render_comparison_summary(items):
 
 
 def render_snapshot_cards(items):
-    cards = []
-    for label, value in items:
-        cards.append(
-            f"""
-            <div class="snapshot-card">
-                <div class="snapshot-label">{escape(str(label))}</div>
-                <div class="snapshot-value" title="{escape(str(value))}">{escape(str(value))}</div>
-            </div>
-            """
-        )
-
-    st.markdown(
-        f'<div class="snapshot-grid">{"".join(cards)}</div>',
-        unsafe_allow_html=True,
-    )
+    columns = st.columns(len(items))
+    for column, (label, value) in zip(columns, items):
+        with column:
+            st.markdown(
+                f"""
+                <div class="snapshot-card">
+                    <div class="snapshot-label">{escape(str(label))}</div>
+                    <div class="snapshot-value" title="{escape(str(value))}">{escape(str(value))}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 def render_tab_3d_hero(kicker, title, copy):
