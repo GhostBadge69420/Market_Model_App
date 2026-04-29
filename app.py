@@ -511,313 +511,198 @@ def render_three_market_scene(asset_name, year_label, trend_label):
         radial-gradient(circle at 18% 18%, rgba(69,211,255,.22), transparent 28%),
         radial-gradient(circle at 82% 16%, rgba(255,177,92,.16), transparent 24%),
         linear-gradient(135deg, #06131c 0%, #0b0b14 52%, #16111f 100%);">
-          <div id="vanta-layer" style="position:absolute;inset:0;z-index:0;"></div>
+          <canvas id="market-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;"></canvas>
           <div style="position:absolute;inset:0;z-index:1;background:
             linear-gradient(180deg, rgba(6,19,28,0.14) 0%, rgba(6,19,28,0.54) 100%),
             radial-gradient(circle at top left, rgba(56, 189, 248, 0.10), transparent 32%);"></div>
-          <div style="position:absolute;left:22px;right:22px;top:18px;z-index:3;color:#f7fafc;font-family:'Space Grotesk',Arial,sans-serif;">
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(134,239,255,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Core Three.js</span>
-              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(196,181,253,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">React State Control</span>
-              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(251,191,36,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Vanta Motion Layer</span>
-              <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(74,222,128,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Cannon Physics</span>
-            </div>
-            <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.72;">3D Market Dashboard</div>
-            <div style="font-size:30px;font-weight:700;margin-top:8px;line-height:1;">{asset_name}</div>
-            <div style="font-size:13px;opacity:.84;margin-top:7px;">{year_label} • {trend_label}</div>
-            <div style="margin-top:14px;max-width:460px;font-size:13px;line-height:1.5;color:rgba(241,245,249,.82);">
-              Compact highlights, animated depth, and physics-driven motion tuned for a sharper market terminal feel.
-            </div>
-          </div>
-          <div id="scene-mount" style="width:100%;height:100%;position:relative;z-index:2;"></div>
+          <div id="hero-overlay" style="position:absolute;left:22px;right:22px;top:18px;z-index:3;"></div>
         </div>
 
-        <script type="module">
-          import React, {{ useEffect, useMemo, useRef, useState }} from "https://esm.sh/react@18.3.1";
-          import {{ createRoot }} from "https://esm.sh/react-dom@18.3.1/client";
-          import * as THREE from "https://esm.sh/three@0.169.0";
-          import * as CANNON from "https://esm.sh/cannon-es@0.20.0";
-          import {{ Canvas, useFrame }} from "https://esm.sh/@react-three/fiber@8.17.10?external=react,react-dom,three";
+        <script>
+          const overlayNode = document.getElementById("hero-overlay");
+          const canvas = document.getElementById("market-canvas");
+          const ctx = canvas.getContext("2d");
+          const pulses = [
+            "Scanning live motion field",
+            "Balancing collision particles",
+            "Refreshing dashboard energy"
+          ];
+          let pulseIndex = 0;
 
-          window.THREE = THREE;
+          overlayNode.innerHTML = `
+            <div style="color:#f7fafc;font-family:'Space Grotesk',Arial,sans-serif;">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(134,239,255,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">3D Canvas Engine</span>
+                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(196,181,253,.26);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Motion Overlay</span>
+                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(251,191,36,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Collision Field</span>
+                <span style="padding:6px 10px;border-radius:999px;background:rgba(8,18,28,.56);border:1px solid rgba(74,222,128,.22);font-size:11px;letter-spacing:.10em;text-transform:uppercase;">Market Dashboard</span>
+              </div>
+              <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.72;">3D Market Dashboard</div>
+              <div style="font-size:30px;font-weight:700;margin-top:8px;line-height:1;">{asset_name}</div>
+              <div style="font-size:13px;opacity:.84;margin-top:7px;">{year_label} • {trend_label}</div>
+              <div style="margin-top:14px;max-width:460px;font-size:13px;line-height:1.5;color:rgba(241,245,249,.82);">
+                Compact highlights, animated depth, and physics-driven motion tuned for a sharper market terminal feel.
+              </div>
+              <div id="pulse-chip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 11px;background:rgba(7,17,26,.62);border:1px solid rgba(125,211,252,.22);font-size:12px;color:rgba(226,232,240,.92);">
+                <span style="width:8px;height:8px;border-radius:999px;background:#4ade80;box-shadow:0 0 12px rgba(74,222,128,.6);"></span>
+                <span id="pulse-label">${{pulses[0]}}</span>
+              </div>
+            </div>
+          `;
 
-          function loadScript(src) {{
-            return new Promise((resolve, reject) => {{
-              const existing = document.querySelector(`script[data-src="${{src}}"]`);
-              if (existing) {{
-                if (existing.dataset.loaded === "true") {{
-                  resolve();
-                  return;
-                }}
-                existing.addEventListener("load", resolve, {{ once: true }});
-                existing.addEventListener("error", reject, {{ once: true }});
-                return;
-              }}
+          const pulseLabel = document.getElementById("pulse-label");
+          window.setInterval(() => {{
+            pulseIndex = (pulseIndex + 1) % pulses.length;
+            if (pulseLabel) pulseLabel.textContent = pulses[pulseIndex];
+          }}, 1800);
 
-              const script = document.createElement("script");
-              script.src = src;
-              script.async = true;
-              script.dataset.src = src;
-              script.addEventListener("load", () => {{
-                script.dataset.loaded = "true";
-                resolve();
-              }}, {{ once: true }});
-              script.addEventListener("error", reject, {{ once: true }});
-              document.head.appendChild(script);
-            }});
+          const state = {{
+            bars: Array.from({{ length: 14 }}, (_, i) => ({{
+              x: 80 + i * 34,
+              width: 18,
+              base: 0.8 + (i % 5) * 0.12,
+              phase: i * 0.45,
+              color: i % 2 === 0 ? "#46d7ff" : "#ff7ac6"
+            }})),
+            orbs: Array.from({{ length: 7 }}, (_, i) => ({{
+              x: 180 + i * 44,
+              y: 120 + (i % 3) * 28,
+              z: 0.5 + (i % 4) * 0.18,
+              vx: (Math.random() - 0.5) * 1.7,
+              vy: 0.8 + Math.random() * 1.1,
+              radius: 10 + (i % 3) * 4,
+              color: ["#7dd3fc", "#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#67e8f9"][i]
+            }})),
+            particles: Array.from({{ length: 48 }}, () => ({{
+              angle: Math.random() * Math.PI * 2,
+              radius: 120 + Math.random() * 180,
+              speed: 0.0015 + Math.random() * 0.0025,
+              y: -40 + Math.random() * 220,
+              size: 1 + Math.random() * 2.5
+            }}))
+          }};
+
+          function resize() {{
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+            canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           }}
 
-          async function mountVanta() {{
-            await loadScript("https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js");
-            if (!window.VANTA || window.__rupatchiVanta) return;
+          function animate(now) {{
+            const t = now * 0.001;
+            const width = canvas.getBoundingClientRect().width;
+            const height = canvas.getBoundingClientRect().height;
+            const floorY = height * 0.78;
+            const centerX = width * 0.67;
+            const centerY = height * 0.5;
 
-            window.__rupatchiVanta = window.VANTA.NET({{
-              el: "#vanta-layer",
-              mouseControls: true,
-              touchControls: true,
-              gyroControls: false,
-              minHeight: 500,
-              minWidth: 200,
-              scale: 1,
-              scaleMobile: 1,
-              color: 0x46d7ff,
-              backgroundColor: 0x07111a,
-              points: 10,
-              maxDistance: 20,
-              spacing: 15,
-              showDots: false
-            }});
+            ctx.clearRect(0, 0, width, height);
+
+            const bg = ctx.createLinearGradient(0, 0, 0, height);
+            bg.addColorStop(0, "rgba(5, 18, 28, 0.22)");
+            bg.addColorStop(1, "rgba(5, 10, 18, 0.02)");
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, width, height);
+
+            for (const particle of state.particles) {{
+              particle.angle += particle.speed * 18;
+              const px = centerX + Math.cos(particle.angle) * particle.radius;
+              const py = centerY + Math.sin(particle.angle * 1.15) * 52 + particle.y;
+              ctx.fillStyle = "rgba(253, 230, 138, 0.42)";
+              ctx.beginPath();
+              ctx.arc(px, py % height, particle.size, 0, Math.PI * 2);
+              ctx.fill();
+            }}
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(0.95 + Math.sin(t * 0.55) * 0.06);
+            ctx.strokeStyle = "rgba(103, 232, 249, 0.55)";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 126, 62, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(248, 250, 252, 0.32)";
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 150, 74, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            for (const bar of state.bars) {{
+              const barHeight = 60 + Math.sin(t * 1.8 + bar.phase) * 34 + bar.base * 48;
+              const x = width * 0.5 + (bar.x - 290);
+              const y = floorY - barHeight;
+              ctx.fillStyle = `${{bar.color}}cc`;
+              ctx.fillRect(x, y, bar.width, barHeight);
+              ctx.fillStyle = "rgba(255,255,255,0.18)";
+              ctx.fillRect(x, y, bar.width, 6);
+              ctx.fillStyle = "rgba(8, 20, 32, 0.44)";
+              ctx.beginPath();
+              ctx.moveTo(x + bar.width, y);
+              ctx.lineTo(x + bar.width + 10, y - 8);
+              ctx.lineTo(x + bar.width + 10, floorY - 8);
+              ctx.lineTo(x + bar.width, floorY);
+              ctx.closePath();
+              ctx.fill();
+            }}
+
+            ctx.strokeStyle = "rgba(70, 215, 255, 0.18)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 9; i += 1) {{
+              const gy = floorY - i * 24;
+              ctx.beginPath();
+              ctx.moveTo(width * 0.4, gy);
+              ctx.lineTo(width * 0.9, gy);
+              ctx.stroke();
+            }}
+
+            for (const orb of state.orbs) {{
+              orb.vy += 0.055;
+              orb.x += orb.vx;
+              orb.y += orb.vy;
+
+              if (orb.y + orb.radius > floorY) {{
+                orb.y = floorY - orb.radius;
+                orb.vy *= -0.92;
+              }}
+              if (orb.x - orb.radius < width * 0.42 || orb.x + orb.radius > width * 0.92) {{
+                orb.vx *= -1;
+              }}
+
+              const glow = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, orb.radius * 2.7);
+              glow.addColorStop(0, `${{orb.color}}ee`);
+              glow.addColorStop(1, "rgba(0,0,0,0)");
+              ctx.fillStyle = glow;
+              ctx.beginPath();
+              ctx.arc(orb.x, orb.y, orb.radius * 2.7, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = orb.color;
+              ctx.beginPath();
+              ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = "rgba(255,255,255,0.32)";
+              ctx.beginPath();
+              ctx.arc(orb.x - orb.radius * 0.25, orb.y - orb.radius * 0.25, orb.radius * 0.3, 0, Math.PI * 2);
+              ctx.fill();
+            }}
+
+            const horizon = ctx.createLinearGradient(0, floorY - 18, 0, floorY + 42);
+            horizon.addColorStop(0, "rgba(103, 232, 249, 0.08)");
+            horizon.addColorStop(1, "rgba(8, 16, 28, 0)");
+            ctx.fillStyle = horizon;
+            ctx.fillRect(width * 0.36, floorY - 18, width * 0.6, 60);
+
+            window.requestAnimationFrame(animate);
           }}
 
-          function PhysicsField() {{
-            const group = useRef();
-            const halo = useRef();
-            const barGroup = useRef();
-            const bodyRefs = useRef([]);
-            const meshRefs = useRef([]);
-            const worldRef = useRef(null);
-            const pulseRef = useRef(0);
-            const [, setPhase] = useState(0);
-
-            const particles = useMemo(() => {{
-              const points = [];
-              for (let i = 0; i < 140; i += 1) {{
-                const radius = 3.2 + Math.random() * 2.4;
-                const angle = Math.random() * Math.PI * 2;
-                const height = (Math.random() - 0.5) * 3.2;
-                points.push(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
-              }}
-              return new Float32Array(points);
-            }}, []);
-
-            const orbs = useMemo(() => ([
-              ["#7dd3fc", 0.18, [-1.6, 2.4, 0.1]],
-              ["#f9a8d4", 0.22, [-0.7, 3.2, 0.4]],
-              ["#fde68a", 0.17, [0.2, 2.8, -0.1]],
-              ["#93c5fd", 0.20, [1.0, 3.4, 0.2]],
-              ["#86efac", 0.16, [1.8, 2.6, -0.3]],
-              ["#c4b5fd", 0.19, [0.5, 4.0, 0.45]],
-            ]), []);
-
-            useEffect(() => {{
-              const world = new CANNON.World({{
-                gravity: new CANNON.Vec3(0, -5.4, 0)
-              }});
-              world.broadphase = new CANNON.NaiveBroadphase();
-              world.allowSleep = true;
-              world.defaultContactMaterial.friction = 0.06;
-              world.defaultContactMaterial.restitution = 0.86;
-
-              const floor = new CANNON.Body({{ type: CANNON.Body.STATIC, shape: new CANNON.Plane() }});
-              floor.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-              floor.position.set(0, -1.7, 0);
-              world.addBody(floor);
-
-              const leftWall = new CANNON.Body({{ type: CANNON.Body.STATIC, shape: new CANNON.Plane() }});
-              leftWall.quaternion.setFromEuler(0, Math.PI / 2, 0);
-              leftWall.position.set(-2.6, 0, 0);
-              world.addBody(leftWall);
-
-              const rightWall = new CANNON.Body({{ type: CANNON.Body.STATIC, shape: new CANNON.Plane() }});
-              rightWall.quaternion.setFromEuler(0, -Math.PI / 2, 0);
-              rightWall.position.set(2.6, 0, 0);
-              world.addBody(rightWall);
-
-              bodyRefs.current = orbs.map(([, radius, position]) => {{
-                const body = new CANNON.Body({{
-                  mass: 0.35,
-                  shape: new CANNON.Sphere(radius),
-                  position: new CANNON.Vec3(...position),
-                  linearDamping: 0.14,
-                  angularDamping: 0.22
-                }});
-                body.velocity.set((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.2);
-                world.addBody(body);
-                return body;
-              }});
-
-              worldRef.current = world;
-              const phaseTimer = window.setInterval(() => {{
-                pulseRef.current = (pulseRef.current + 1) % 3;
-                setPhase((value) => (value + 1) % 3);
-              }}, 1800);
-
-              return () => {{
-                window.clearInterval(phaseTimer);
-                worldRef.current = null;
-                bodyRefs.current = [];
-                meshRefs.current = [];
-              }};
-            }}, [orbs]);
-
-            useFrame((state, delta) => {{
-              const world = worldRef.current;
-              if (!world) return;
-
-              world.step(1 / 60, delta, 3);
-              const t = state.clock.getElapsedTime();
-
-              bodyRefs.current.forEach((body, index) => {{
-                body.applyForce(
-                  new CANNON.Vec3(Math.sin(t * 0.9 + index) * 0.12, 0, Math.cos(t * 0.8 + index) * 0.06),
-                  body.position
-                );
-
-                const mesh = meshRefs.current[index];
-                if (mesh) {{
-                  mesh.position.copy(body.position);
-                  mesh.quaternion.copy(body.quaternion);
-                }}
-              }});
-
-              if (group.current) group.current.rotation.y = Math.sin(t * 0.18) * 0.22;
-              if (halo.current) {{
-                halo.current.rotation.z -= 0.004;
-                halo.current.rotation.x = 1.02 + Math.sin(t * 0.45) * 0.12;
-              }}
-              if (barGroup.current) {{
-                barGroup.current.children.forEach((bar, index) => {{
-                  bar.scale.y = 0.82 + Math.sin(t * 1.55 + index * 0.48 + pulseRef.current) * 0.30;
-                }});
-              }}
-            }});
-
-            return React.createElement(
-              "group",
-              {{ ref: group, position: [0.2, 0.12, 0] }},
-              React.createElement("ambientLight", {{ intensity: 1.15 }}),
-              React.createElement("directionalLight", {{ position: [4, 4, 3], intensity: 2.05, color: "#7dd3fc" }}),
-              React.createElement("directionalLight", {{ position: [-3, -1, 4], intensity: 1.3, color: "#f9a8d4" }}),
-              React.createElement(
-                "mesh",
-                {{ rotation: [-Math.PI / 2, 0, 0], position: [0, -1.72, 0] }},
-                React.createElement("planeGeometry", {{ args: [7.8, 4.6, 1, 1] }}),
-                React.createElement("meshStandardMaterial", {{
-                  color: "#08131d",
-                  transparent: true,
-                  opacity: 0.72,
-                  metalness: 0.48,
-                  roughness: 0.24
-                }})
-              ),
-              React.createElement(
-                "mesh",
-                {{ ref: halo, rotation: [1.04, 0.2, 0.55], position: [0, 0.2, -0.55] }},
-                React.createElement("torusGeometry", {{ args: [2.18, 0.05, 20, 160] }}),
-                React.createElement("meshStandardMaterial", {{
-                  color: "#f8fafc",
-                  emissive: "#67e8f9",
-                  emissiveIntensity: 0.48,
-                  metalness: 0.88,
-                  roughness: 0.14
-                }})
-              ),
-              React.createElement(
-                "group",
-                {{ ref: barGroup, position: [0, -0.95, -0.45] }},
-                ...Array.from({{ length: 12 }}, (_, index) =>
-                  React.createElement(
-                    "mesh",
-                    {{
-                      key: index,
-                      position: [-2.15 + index * 0.39, 0, 0]
-                    }},
-                    React.createElement("boxGeometry", {{ args: [0.16, 0.85 + (index % 4) * 0.18, 0.16] }}),
-                    React.createElement("meshPhysicalMaterial", {{
-                      color: index % 2 === 0 ? "#46d7ff" : "#ff7ac6",
-                      emissive: index % 2 === 0 ? "#22c7ff" : "#ff4fad",
-                      emissiveIntensity: 0.42,
-                      metalness: 0.92,
-                      roughness: 0.18,
-                      transparent: true,
-                      opacity: 0.84
-                    }})
-                  )
-                )
-              ),
-              ...orbs.map(([color, radius], index) =>
-                React.createElement(
-                  "mesh",
-                  {{
-                    key: `orb-${{index}}`,
-                    ref: (node) => {{
-                      if (node) meshRefs.current[index] = node;
-                    }}
-                  }},
-                  React.createElement("sphereGeometry", {{ args: [radius, 28, 28] }}),
-                  React.createElement("meshPhysicalMaterial", {{
-                    color,
-                    emissive: color,
-                    emissiveIntensity: 0.42,
-                    transparent: true,
-                    opacity: 0.92,
-                    roughness: 0.12,
-                    metalness: 0.55,
-                    transmission: 0.14
-                  }})
-                )
-              ),
-              React.createElement(
-                "points",
-                {{ position: [0, 0.25, -0.8] }},
-                React.createElement("bufferGeometry", null,
-                  React.createElement("bufferAttribute", {{
-                    attach: "attributes-position",
-                    count: particles.length / 3,
-                    array: particles,
-                    itemSize: 3
-                  }})
-                ),
-                React.createElement("pointsMaterial", {{
-                  color: "#fde68a",
-                  size: 0.055,
-                  transparent: true,
-                  opacity: 0.9
-                }})
-              )
-            );
-          }}
-
-          function App() {{
-            const [ready, setReady] = useState(false);
-
-            useEffect(() => {{
-              mountVanta().finally(() => setReady(true));
-            }}, []);
-
-            return React.createElement(
-              Canvas,
-              {{
-                camera: {{ position: [0, 0.1, 5.7], fov: 42 }},
-                dpr: [1, 2]
-              }},
-              React.createElement("fog", {{ attach: "fog", args: ["#06131c", 5, 10] }}),
-              ready ? React.createElement(PhysicsField) : null
-            );
-          }}
-
-          const mountNode = document.getElementById("scene-mount");
-          createRoot(mountNode).render(React.createElement(App));
+          window.addEventListener("resize", resize);
+          resize();
+          window.requestAnimationFrame(animate);
         </script>
         """,
         height=500,
