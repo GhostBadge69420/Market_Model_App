@@ -1336,10 +1336,23 @@ def build_custom_asset_summary(asset_key):
             errors="coerce",
         )
 
+    if "PyTorch Transformer Forecast" not in asset_summary.columns:
+        asset_summary["PyTorch Transformer Forecast"] = np.nan
+    else:
+        asset_summary["PyTorch Transformer Forecast"] = pd.to_numeric(
+            asset_summary["PyTorch Transformer Forecast"],
+            errors="coerce",
+        )
+
     for row_index, row in asset_summary.iterrows():
         year_label = str(row.get("Year", "")).strip()
         forecast_values = forecast_map.get(year_label, {})
-        for column_name in ["ARIMA Forecast", "Random Forest Forecast", "Advanced Ensemble Forecast"]:
+        for column_name in [
+            "ARIMA Forecast",
+            "Random Forest Forecast",
+            "PyTorch Transformer Forecast",
+            "Advanced Ensemble Forecast",
+        ]:
             value = forecast_values.get(column_name)
             if value is not None and not pd.isna(value):
                 asset_summary.at[row_index, column_name] = round(float(value), 4)
@@ -3537,12 +3550,16 @@ with models_tab:
         if better_ml_model:
             better_rmse = metric_df.loc[metric_df["Model"] == better_ml_model, "RMSE"].iloc[0]
             comparison_label = better_ml_model
+            transformer_info = results.get("transformer", {})
+            transformer_label = "Skipped"
+            if transformer_info.get("enabled"):
+                transformer_label = f"{transformer_info.get('sequence_length', 'N/A')}-day seq"
             render_comparison_summary(
                 [
                     ("Best Overall", results["best_model"]),
                     ("Best RMSE", f"{best_rmse:.4f}"),
                     ("Features", results.get("feature_count", "N/A")),
-                    ("Best Forecast", comparison_label),
+                    ("Transformer", transformer_label),
                 ]
             )
             st.caption(f"Across the forecasting models, **{better_ml_model}** has the lower RMSE of **{better_rmse}**.")
@@ -3575,7 +3592,7 @@ with models_tab:
         forecast_columns = [
             column for column in comparison_df.columns if column not in {"Date", "Actual", "Benchmark"}
         ]
-        preferred_columns = ["Advanced Ensemble", "Random Forest", "Extra Trees", "Gradient Boosting", "ARIMA"]
+        preferred_columns = ["Advanced Ensemble", "PyTorch Transformer", "Random Forest", "Extra Trees", "Gradient Boosting", "ARIMA"]
         ordered_columns = [column for column in preferred_columns if column in forecast_columns]
         ordered_columns += [column for column in forecast_columns if column not in ordered_columns]
 
