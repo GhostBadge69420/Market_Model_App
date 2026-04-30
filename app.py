@@ -2517,6 +2517,12 @@ ASSETS = {
         "ADA-USD", "DOGE-USD", "AVAX-USD", "LINK-USD", "DOT-USD"
     ],
 
+    "💱 Forex": [
+        "EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X", "AUDUSD=X",
+        "USDCAD=X", "NZDUSD=X", "EURGBP=X", "EURJPY=X", "GBPJPY=X",
+        "EURINR=X", "GBPINR=X", "USDINR=X", "AUDJPY=X", "CHFJPY=X"
+    ],
+
     "🛢 Commodities": [
         "GC=F", "SI=F", "CL=F", "BZ=F", "NG=F",
         "HG=F", "ZC=F", "ZW=F", "ZS=F", "KC=F"
