@@ -1328,10 +1328,18 @@ def build_custom_asset_summary(asset_key):
             errors="coerce",
         )
 
+    if "Advanced Ensemble Forecast" not in asset_summary.columns:
+        asset_summary["Advanced Ensemble Forecast"] = np.nan
+    else:
+        asset_summary["Advanced Ensemble Forecast"] = pd.to_numeric(
+            asset_summary["Advanced Ensemble Forecast"],
+            errors="coerce",
+        )
+
     for row_index, row in asset_summary.iterrows():
         year_label = str(row.get("Year", "")).strip()
         forecast_values = forecast_map.get(year_label, {})
-        for column_name in ["ARIMA Forecast", "Random Forest Forecast"]:
+        for column_name in ["ARIMA Forecast", "Random Forest Forecast", "Advanced Ensemble Forecast"]:
             value = forecast_values.get(column_name)
             if value is not None and not pd.isna(value):
                 asset_summary.at[row_index, column_name] = round(float(value), 4)
@@ -3516,6 +3524,8 @@ with models_tab:
                     "MAE": values["MAE"],
                     "RMSE": values["RMSE"],
                     "R2": values["R2"],
+                    "MAPE": values.get("MAPE"),
+                    "Directional Accuracy": values.get("Directional Accuracy"),
                 }
             )
 
@@ -3531,16 +3541,18 @@ with models_tab:
                 [
                     ("Best Overall", results["best_model"]),
                     ("Best RMSE", f"{best_rmse:.4f}"),
-                    ("ARIMA vs RF", comparison_label),
+                    ("Features", results.get("feature_count", "N/A")),
+                    ("Best Forecast", comparison_label),
                 ]
             )
-            st.caption(f"Between ARIMA and Random Forest, **{better_ml_model}** has the lower RMSE of **{better_rmse}**.")
+            st.caption(f"Across the forecasting models, **{better_ml_model}** has the lower RMSE of **{better_rmse}**.")
         else:
             render_comparison_summary(
                 [
                     ("Best Overall", results["best_model"]),
                     ("Best RMSE", f"{best_rmse:.4f}"),
-                    ("ARIMA vs RF", comparison_label),
+                    ("Features", results.get("feature_count", "N/A")),
+                    ("Best Forecast", comparison_label),
                 ]
             )
 
@@ -3552,7 +3564,7 @@ with models_tab:
         compare_fig.update_layout(
             barmode="group",
             template="plotly_dark",
-            title="ARIMA vs Random Forest vs Benchmark",
+            title="Advanced Forecast Model Bench",
             height=420,
         )
         st.plotly_chart(compare_fig, width="stretch")
@@ -3560,14 +3572,15 @@ with models_tab:
         comparison_df = pd.DataFrame(results["comparison_frame"])
         forecast_fig = go.Figure()
         forecast_fig.add_trace(go.Scatter(x=comparison_df["Date"], y=comparison_df["Actual"], name="Actual"))
-        forecast_fig.add_trace(go.Scatter(x=comparison_df["Date"], y=comparison_df["ARIMA"], name="ARIMA"))
-        forecast_fig.add_trace(
-            go.Scatter(
-                x=comparison_df["Date"],
-                y=comparison_df["Random Forest"],
-                name="Random Forest",
-            )
-        )
+        forecast_columns = [
+            column for column in comparison_df.columns if column not in {"Date", "Actual", "Benchmark"}
+        ]
+        preferred_columns = ["Advanced Ensemble", "Random Forest", "Extra Trees", "Gradient Boosting", "ARIMA"]
+        ordered_columns = [column for column in preferred_columns if column in forecast_columns]
+        ordered_columns += [column for column in forecast_columns if column not in ordered_columns]
+
+        for column in ordered_columns[:6]:
+            forecast_fig.add_trace(go.Scatter(x=comparison_df["Date"], y=comparison_df[column], name=column))
         forecast_fig.update_layout(
             template="plotly_dark",
             title="Out-of-Sample Forecast Comparison",
