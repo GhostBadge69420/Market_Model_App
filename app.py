@@ -2286,8 +2286,11 @@ def get_cached_sentiment(symbol):
     return compute_news_sentiment_score(news_items)
 
 
+MODEL_RESULT_VERSION = "advanced-transformer-v2"
+
+
 @st.cache_data(ttl=900)
-def get_cached_model_results(asset_key, source, year_label="All Years"):
+def get_cached_model_results(asset_key, source, year_label="All Years", model_result_version=MODEL_RESULT_VERSION):
     if source == DATA_SOURCE_HISTORICAL:
         asset_df = get_custom_asset_data_map().get(asset_key, pd.DataFrame())
         asset_df = _filter_data_by_financial_year(asset_df, year_label)
@@ -3524,26 +3527,105 @@ with models_tab:
     if "Error" in results:
         st.warning(results["Error"])
     else:
+        comparison_df = pd.DataFrame(results["comparison_frame"])
         st.caption(
             f"Test window: {results['test_period_start']} to {results['test_period_end']} "
             f"across {results['test_points']} points"
         )
 
+        def _metric_fallback(model_name, metric_name, current_value):
+            if current_value is not None and not pd.isna(current_value):
+                return current_value
+
+            if comparison_df.empty or model_name not in comparison_df.columns or "Actual" not in comparison_df.columns:
+                return None
+
+            actual = pd.to_numeric(comparison_df["Actual"], errors="coerce")
+            predicted = pd.to_numeric(comparison_df[model_name], errors="coerce")
+            valid = pd.DataFrame({"actual": actual, "predicted": predicted}).dropna()
+            if valid.empty:
+                return None
+
+            if metric_name == "MAPE":
+                non_zero_actual = valid["actual"].replace(0, np.nan)
+                mape = (np.abs((valid["actual"] - valid["predicted"]) / non_zero_actual)).dropna().mean()
+                return None if pd.isna(mape) else round(float(mape), 4)
+
+            if metric_name == "Directional Accuracy":
+                previous_actual = valid["actual"].shift(1)
+                mask = previous_actual.notna()
+                if not mask.any():
+                    return None
+                actual_direction = np.sign(valid["actual"] - previous_actual)
+                predicted_direction = np.sign(valid["predicted"] - previous_actual)
+                return round(float((actual_direction[mask] == predicted_direction[mask]).mean()), 4)
+
+            return current_value
+
+        def _format_metric_value(value, *, percent=False):
+            if value is None or pd.isna(value):
+                return "N/A"
+            if percent:
+                return f"{float(value) * 100:.1f}%"
+            return f"{float(value):.4f}"
+
         metric_rows = []
         for model_name, values in results["metrics"].items():
+            mape_value = _metric_fallback(model_name, "MAPE", values.get("MAPE"))
+            direction_value = _metric_fallback(
+                model_name,
+                "Directional Accuracy",
+                values.get("Directional Accuracy"),
+            )
             metric_rows.append(
                 {
                     "Model": model_name,
                     "MAE": values["MAE"],
                     "RMSE": values["RMSE"],
                     "R2": values["R2"],
-                    "MAPE": values.get("MAPE"),
-                    "Directional Accuracy": values.get("Directional Accuracy"),
+                    "MAPE": mape_value,
+                    "Directional Accuracy": direction_value,
                 }
             )
 
         metric_df = pd.DataFrame(metric_rows)
-        best_rmse = metric_df.loc[metric_df["Model"] == results["best_model"], "RMSE"].iloc[0]
+        metric_display_df = metric_df.copy()
+        for column_name in ["MAE", "RMSE", "R2"]:
+            metric_display_df[column_name] = metric_display_df[column_name].apply(_format_metric_value)
+        metric_display_df["MAPE"] = metric_display_df["MAPE"].apply(lambda value: _format_metric_value(value, percent=True))
+        metric_display_df["Directional Accuracy"] = metric_display_df["Directional Accuracy"].apply(
+            lambda value: _format_metric_value(value, percent=True)
+        )
+
+        best_rmse = pd.to_numeric(
+            metric_df.loc[metric_df["Model"] == results["best_model"], "RMSE"],
+            errors="coerce",
+        ).iloc[0]
+        feature_count = results.get("feature_count")
+        if feature_count is None or pd.isna(feature_count):
+            feature_count = len([column for column in comparison_df.columns if column not in {"Date", "Actual"}])
+
+        arima_rmse = pd.to_numeric(
+            metric_df.loc[metric_df["Model"] == "ARIMA", "RMSE"],
+            errors="coerce",
+        )
+        rf_rmse = pd.to_numeric(
+            metric_df.loc[metric_df["Model"] == "Random Forest", "RMSE"],
+            errors="coerce",
+        )
+        arima_vs_rf_label = "N/A"
+        arima_vs_rf_caption = ""
+        if not arima_rmse.empty and not rf_rmse.empty and not pd.isna(arima_rmse.iloc[0]) and not pd.isna(rf_rmse.iloc[0]):
+            if arima_rmse.iloc[0] < rf_rmse.iloc[0]:
+                arima_vs_rf_label = "ARIMA"
+            elif rf_rmse.iloc[0] < arima_rmse.iloc[0]:
+                arima_vs_rf_label = "Random Forest"
+            else:
+                arima_vs_rf_label = "Tie"
+            arima_vs_rf_caption = (
+                f"ARIMA RMSE: **{arima_rmse.iloc[0]:.4f}** · "
+                f"Random Forest RMSE: **{rf_rmse.iloc[0]:.4f}**"
+            )
 
         better_ml_model = results.get("best_forecasting_model")
         comparison_label = "N/A"
@@ -3558,22 +3640,29 @@ with models_tab:
                 [
                     ("Best Overall", results["best_model"]),
                     ("Best RMSE", f"{best_rmse:.4f}"),
-                    ("Features", results.get("feature_count", "N/A")),
-                    ("Transformer", transformer_label),
+                    ("Features", feature_count),
+                    ("ARIMA vs RF", arima_vs_rf_label),
                 ]
             )
             st.caption(f"Across the forecasting models, **{better_ml_model}** has the lower RMSE of **{better_rmse}**.")
+            if arima_vs_rf_caption:
+                st.caption(f"Between ARIMA and Random Forest, **{arima_vs_rf_label}** is better by RMSE. {arima_vs_rf_caption}.")
+            if transformer_info:
+                transformer_status = transformer_label
+                if not transformer_info.get("enabled") and transformer_info.get("reason"):
+                    transformer_status = f"Skipped: {transformer_info['reason']}"
+                st.caption(f"Transformer status: **{transformer_status}**.")
         else:
             render_comparison_summary(
                 [
                     ("Best Overall", results["best_model"]),
                     ("Best RMSE", f"{best_rmse:.4f}"),
-                    ("Features", results.get("feature_count", "N/A")),
-                    ("Best Forecast", comparison_label),
+                    ("Features", feature_count),
+                    ("ARIMA vs RF", arima_vs_rf_label),
                 ]
             )
 
-        st.dataframe(metric_df, width="stretch", hide_index=True)
+        st.dataframe(metric_display_df, width="stretch", hide_index=True)
 
         compare_fig = go.Figure()
         compare_fig.add_trace(go.Bar(x=metric_df["Model"], y=metric_df["MAE"], name="MAE"))
@@ -3586,7 +3675,6 @@ with models_tab:
         )
         st.plotly_chart(compare_fig, width="stretch")
 
-        comparison_df = pd.DataFrame(results["comparison_frame"])
         forecast_fig = go.Figure()
         forecast_fig.add_trace(go.Scatter(x=comparison_df["Date"], y=comparison_df["Actual"], name="Actual"))
         forecast_columns = [
