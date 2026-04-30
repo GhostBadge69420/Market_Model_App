@@ -13,6 +13,13 @@ from statsmodels.tsa.arima.model import ARIMA
 
 from .features import create_features
 
+try:
+    import torch
+    from torch import nn
+except Exception:
+    torch = None
+    nn = None
+
 ADVANCED_FEATURE_COLUMNS = [
     "Open",
     "High",
@@ -55,6 +62,38 @@ ADVANCED_FEATURE_COLUMNS = [
     "Return_20",
     "RSI14",
 ]
+TRANSFORMER_SEQUENCE_LENGTH = 16
+TRANSFORMER_MIN_TRAIN_SEQUENCES = 48
+
+
+class TimeSeriesTransformer(nn.Module if nn is not None else object):
+    def __init__(self, feature_count, model_dim=32, nhead=4, layers=1, dropout=0.06):
+        super().__init__()
+        self.input_projection = nn.Linear(feature_count, model_dim)
+        self.position_embedding = nn.Parameter(torch.zeros(1, TRANSFORMER_SEQUENCE_LENGTH, model_dim))
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=model_dim,
+            nhead=nhead,
+            dim_feedforward=model_dim * 3,
+            dropout=dropout,
+            activation="gelu",
+            batch_first=True,
+            norm_first=False,
+        )
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=layers)
+        self.head = nn.Sequential(
+            nn.LayerNorm(model_dim),
+            nn.Linear(model_dim, model_dim // 2),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(model_dim // 2, 1),
+        )
+
+    def forward(self, sequence):
+        encoded = self.input_projection(sequence)
+        encoded = encoded + self.position_embedding[:, : encoded.shape[1], :]
+        encoded = self.encoder(encoded)
+        return self.head(encoded[:, -1, :]).squeeze(-1)
 
 
 @lru_cache(maxsize=32)
@@ -162,6 +201,118 @@ def _fit_predict_models(X_train, y_train, X_test):
     return predictions, fitted_models
 
 
+def _build_transformer_sequences(features, target, sequence_length):
+    X_sequences = []
+    y_values = []
+    row_positions = []
+    feature_values = features.to_numpy(dtype=np.float32)
+    target_values = target.to_numpy(dtype=np.float32)
+
+    for position in range(sequence_length - 1, len(features)):
+        X_sequences.append(feature_values[position - sequence_length + 1 : position + 1])
+        y_values.append(target_values[position])
+        row_positions.append(position)
+
+    if not X_sequences:
+        return None, None, []
+
+    return np.asarray(X_sequences, dtype=np.float32), np.asarray(y_values, dtype=np.float32), row_positions
+
+
+def _fit_predict_transformer(X_train, y_train, X_test):
+    if torch is None or nn is None:
+        return pd.Series(index=X_test.index, dtype=float), {"enabled": False, "reason": "PyTorch unavailable"}
+
+    all_features = pd.concat([X_train, X_test])
+    all_target = pd.concat([y_train, pd.Series(index=X_test.index, dtype=float)])
+    train_count = len(X_train)
+    sequence_length = min(TRANSFORMER_SEQUENCE_LENGTH, max(6, train_count // 4))
+
+    if train_count < sequence_length + TRANSFORMER_MIN_TRAIN_SEQUENCES:
+        return pd.Series(index=X_test.index, dtype=float), {
+            "enabled": False,
+            "reason": "Not enough sequence data",
+            "sequence_length": sequence_length,
+        }
+
+    feature_scaler = RobustScaler()
+    scaled_train = feature_scaler.fit_transform(X_train)
+    scaled_all = feature_scaler.transform(all_features)
+    scaled_features = pd.DataFrame(scaled_all, index=all_features.index, columns=all_features.columns)
+
+    target_mean = float(y_train.mean())
+    target_std = float(y_train.std(ddof=0)) or 1.0
+    scaled_target = (all_target - target_mean) / target_std
+
+    X_sequences, y_values, row_positions = _build_transformer_sequences(
+        scaled_features,
+        scaled_target,
+        sequence_length,
+    )
+    if X_sequences is None:
+        return pd.Series(index=X_test.index, dtype=float), {"enabled": False, "reason": "No sequences"}
+
+    train_mask = np.asarray(row_positions) < train_count
+    test_mask = np.asarray(row_positions) >= train_count
+
+    if train_mask.sum() < TRANSFORMER_MIN_TRAIN_SEQUENCES or test_mask.sum() == 0:
+        return pd.Series(index=X_test.index, dtype=float), {
+            "enabled": False,
+            "reason": "Insufficient train/test sequences",
+            "sequence_length": sequence_length,
+        }
+
+    torch.manual_seed(42)
+    torch.set_num_threads(max(1, min(4, torch.get_num_threads())))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = TimeSeriesTransformer(feature_count=X_train.shape[1]).to(device)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0015, weight_decay=0.01)
+    loss_fn = nn.SmoothL1Loss()
+
+    X_tensor = torch.tensor(X_sequences[train_mask], dtype=torch.float32, device=device)
+    y_tensor = torch.tensor(y_values[train_mask], dtype=torch.float32, device=device)
+    epochs = 22 if train_mask.sum() < 220 else 30
+    batch_size = min(32, len(X_tensor))
+
+    model.train()
+    for _ in range(epochs):
+        permutation = torch.randperm(len(X_tensor), device=device)
+        for start in range(0, len(X_tensor), batch_size):
+            batch_index = permutation[start : start + batch_size]
+            optimizer.zero_grad(set_to_none=True)
+            prediction = model(X_tensor[batch_index])
+            loss = loss_fn(prediction, y_tensor[batch_index])
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        test_tensor = torch.tensor(X_sequences[test_mask], dtype=torch.float32, device=device)
+        scaled_predictions = model(test_tensor).detach().cpu().numpy()
+
+    predictions = (scaled_predictions * target_std) + target_mean
+    prediction_positions = np.asarray(row_positions)[test_mask] - train_count
+    prediction_index = X_test.index[prediction_positions]
+    metadata = {
+        "enabled": True,
+        "device": str(device),
+        "epochs": epochs,
+        "sequence_length": sequence_length,
+        "train_sequences": int(train_mask.sum()),
+    }
+
+    return pd.Series(predictions, index=prediction_index, dtype=float).reindex(X_test.index), metadata
+
+
+def _fit_predict_automated_bench(X_train, y_train, X_test):
+    predictions, fitted_models = _fit_predict_models(X_train, y_train, X_test)
+    transformer_predictions, transformer_metadata = _fit_predict_transformer(X_train, y_train, X_test)
+    if transformer_metadata.get("enabled") or not transformer_predictions.dropna().empty:
+        predictions["PyTorch Transformer"] = transformer_predictions
+    return predictions, fitted_models, transformer_metadata
+
+
 def _weighted_ensemble(prediction_map, metrics):
     eligible = {
         name: values["RMSE"]
@@ -237,7 +388,7 @@ def compare_history_models(df, label="CUSTOM"):
     except Exception:
         arima_pred = pd.Series(index=y_test.index, dtype=float)
 
-    model_predictions, _ = _fit_predict_models(X_train, y_train, X_test)
+    model_predictions, _, transformer_metadata = _fit_predict_automated_bench(X_train, y_train, X_test)
     prediction_map = {
         "Benchmark": pd.Series(benchmark_pred.to_numpy(), index=y_test.index, dtype=float),
         "ARIMA": arima_pred.reindex(y_test.index),
@@ -288,6 +439,7 @@ def compare_history_models(df, label="CUSTOM"):
         "test_period_end": str(target_dates[-1].date()),
         "feature_count": int(len(feature_columns)),
         "ensemble_weights": {name: round(float(weight), 4) for name, weight in ensemble_weights.items()},
+        "transformer": transformer_metadata,
         "metrics": metric_table,
         "comparison_frame": comparison_frame.to_dict("records"),
     }
@@ -327,6 +479,7 @@ def forecast_period_returns(df, periods):
 
         arima_return = None
         rf_return = None
+        transformer_return = None
         ensemble_return = None
 
         if len(period_close) >= 2 and len(close_train) >= 60:
@@ -348,8 +501,9 @@ def forecast_period_returns(df, periods):
                     X_train = feat_train[feature_columns]
                     y_train = feat_train["Target_Close"]
                     X_test = feat_test[feature_columns]
-                    predictions, _ = _fit_predict_models(X_train, y_train, X_test)
+                    predictions, _, _ = _fit_predict_automated_bench(X_train, y_train, X_test)
                     rf_forecast = predictions["Random Forest"].to_numpy()
+                    transformer_forecast = predictions.get("PyTorch Transformer", pd.Series(dtype=float)).dropna().to_numpy()
                     forecast_matrix = pd.DataFrame(predictions)
 
                     if not forecast_matrix.empty:
@@ -359,13 +513,17 @@ def forecast_period_returns(df, periods):
 
                     if len(rf_forecast):
                         rf_return = float((float(rf_forecast[-1]) / start_close) - 1)
+                    if len(transformer_forecast):
+                        transformer_return = float((float(transformer_forecast[-1]) / start_close) - 1)
                 except Exception:
                     rf_return = None
+                    transformer_return = None
                     ensemble_return = None
 
         output[label] = {
             "ARIMA Forecast": arima_return,
             "Random Forest Forecast": rf_return,
+            "PyTorch Transformer Forecast": transformer_return,
             "Advanced Ensemble Forecast": ensemble_return,
         }
 
