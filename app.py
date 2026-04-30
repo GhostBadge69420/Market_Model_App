@@ -3605,62 +3605,45 @@ with models_tab:
         if feature_count is None or pd.isna(feature_count):
             feature_count = len([column for column in comparison_df.columns if column not in {"Date", "Actual"}])
 
-        arima_rmse = pd.to_numeric(
-            metric_df.loc[metric_df["Model"] == "ARIMA", "RMSE"],
-            errors="coerce",
-        )
-        rf_rmse = pd.to_numeric(
-            metric_df.loc[metric_df["Model"] == "Random Forest", "RMSE"],
-            errors="coerce",
-        )
-        arima_vs_rf_label = "N/A"
-        arima_vs_rf_caption = ""
-        if not arima_rmse.empty and not rf_rmse.empty and not pd.isna(arima_rmse.iloc[0]) and not pd.isna(rf_rmse.iloc[0]):
-            if arima_rmse.iloc[0] < rf_rmse.iloc[0]:
-                arima_vs_rf_label = "ARIMA"
-            elif rf_rmse.iloc[0] < arima_rmse.iloc[0]:
-                arima_vs_rf_label = "Random Forest"
-            else:
-                arima_vs_rf_label = "Tie"
-            arima_vs_rf_caption = (
-                f"ARIMA RMSE: **{arima_rmse.iloc[0]:.4f}** · "
-                f"Random Forest RMSE: **{rf_rmse.iloc[0]:.4f}**"
-            )
+        model_bench = [
+            "ARIMA",
+            "Random Forest",
+            "Extra Trees",
+            "Gradient Boosting",
+            "Hist Gradient Boosting",
+            "Robust Ridge",
+            "PyTorch Transformer",
+            "Advanced Ensemble",
+        ]
+        bench_df = metric_df[metric_df["Model"].isin(model_bench)].copy()
+        bench_df["RMSE"] = pd.to_numeric(bench_df["RMSE"], errors="coerce")
+        bench_df = bench_df.dropna(subset=["RMSE"])
 
-        better_ml_model = results.get("best_forecasting_model")
-        comparison_label = "N/A"
-        if better_ml_model:
-            better_rmse = metric_df.loc[metric_df["Model"] == better_ml_model, "RMSE"].iloc[0]
-            comparison_label = better_ml_model
-            transformer_info = results.get("transformer", {})
-            transformer_label = "Skipped"
-            if transformer_info.get("enabled"):
-                transformer_label = f"{transformer_info.get('sequence_length', 'N/A')}-day seq"
-            render_comparison_summary(
-                [
-                    ("Best Overall", results["best_model"]),
-                    ("Best RMSE", f"{best_rmse:.4f}"),
-                    ("Features", feature_count),
-                    ("ARIMA vs RF", arima_vs_rf_label),
-                ]
-            )
-            st.caption(f"Across the forecasting models, **{better_ml_model}** has the lower RMSE of **{better_rmse}**.")
-            if arima_vs_rf_caption:
-                st.caption(f"Between ARIMA and Random Forest, **{arima_vs_rf_label}** is better by RMSE. {arima_vs_rf_caption}.")
-            if transformer_info:
-                transformer_status = transformer_label
-                if not transformer_info.get("enabled") and transformer_info.get("reason"):
-                    transformer_status = f"Skipped: {transformer_info['reason']}"
-                st.caption(f"Transformer status: **{transformer_status}**.")
-        else:
-            render_comparison_summary(
-                [
-                    ("Best Overall", results["best_model"]),
-                    ("Best RMSE", f"{best_rmse:.4f}"),
-                    ("Features", feature_count),
-                    ("ARIMA vs RF", arima_vs_rf_label),
-                ]
-            )
+        best_forecast_model = results.get("best_forecasting_model") or "N/A"
+        best_forecast_rmse = None
+        if not bench_df.empty:
+            best_row = bench_df.loc[bench_df["RMSE"].idxmin()]
+            best_forecast_model = best_row["Model"]
+            best_forecast_rmse = float(best_row["RMSE"])
+
+        transformer_info = results.get("transformer", {})
+        transformer_label = "Skipped"
+        if transformer_info.get("enabled"):
+            transformer_label = f"{transformer_info.get('sequence_length', 'N/A')}-day seq"
+
+        render_comparison_summary(
+            [
+                ("Best Model", best_forecast_model),
+                ("Best RMSE", "N/A" if best_forecast_rmse is None else f"{best_forecast_rmse:.4f}"),
+                ("Features", feature_count),
+                ("Transformer", transformer_label),
+            ]
+        )
+
+        if best_forecast_rmse is not None:
+            st.caption(f"Best performer: **{best_forecast_model}** with RMSE **{best_forecast_rmse:.4f}** across the advanced forecasting bench.")
+        if transformer_info and not transformer_info.get("enabled") and transformer_info.get("reason"):
+            st.caption(f"Transformer status: **Skipped: {transformer_info['reason']}**.")
 
         st.dataframe(metric_display_df, width="stretch", hide_index=True)
 
@@ -3680,7 +3663,16 @@ with models_tab:
         forecast_columns = [
             column for column in comparison_df.columns if column not in {"Date", "Actual", "Benchmark"}
         ]
-        preferred_columns = ["Advanced Ensemble", "PyTorch Transformer", "Random Forest", "Extra Trees", "Gradient Boosting", "ARIMA"]
+        preferred_columns = [
+            "Advanced Ensemble",
+            "PyTorch Transformer",
+            "Random Forest",
+            "Extra Trees",
+            "Gradient Boosting",
+            "Hist Gradient Boosting",
+            "Robust Ridge",
+            "ARIMA",
+        ]
         ordered_columns = [column for column in preferred_columns if column in forecast_columns]
         ordered_columns += [column for column in forecast_columns if column not in ordered_columns]
 
