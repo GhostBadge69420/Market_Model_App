@@ -6,18 +6,18 @@ RESEARCH_CONTEXT = {
     ),
     "objectives": [
         "Analyze how price, volume, sentiment, and macro variables relate to equity-market movement.",
-        "Compare ARIMA, Random Forest, and a price-only benchmark using common forecast metrics.",
+        "Compare ARIMA, tree ensembles, boosted models, regularized regression, and a price-only benchmark using common forecast metrics.",
         "Build a practical forecasting workflow that is reproducible inside the dashboard.",
     ],
     "hypotheses": [
         "A multi-source model should reduce forecast error compared with a price-only benchmark.",
-        "Random Forest with extended features should match or outperform a price-only ARIMA baseline.",
+        "An ensemble of nonlinear models with extended technical features should match or outperform a price-only ARIMA baseline.",
     ],
     "methodology": [
         "Collect daily OHLCV market data, sentiment data, and macro proxies.",
-        "Create engineered features such as moving averages, volatility, RSI, and MACD.",
-        "Train ARIMA on price-only history and Random Forest on the richer multi-source feature set.",
-        "Evaluate models on the same held-out test period using MAE, RMSE, and R².",
+        "Create engineered features such as moving averages, volatility regimes, Bollinger position, RSI, MACD, momentum, gaps, and volume ratios.",
+        "Train ARIMA on price-only history and multiple machine-learning regressors on the richer feature set.",
+        "Evaluate models on the same held-out test period using MAE, RMSE, R², MAPE, and directional accuracy.",
     ],
     "data_sources": [
         "Yahoo Finance for OHLCV and market prices",
@@ -25,4 +25,3 @@ RESEARCH_CONTEXT = {
         "Macro proxies such as market returns, volatility, and rates",
     ],
 }
-
