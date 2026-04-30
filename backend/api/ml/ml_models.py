@@ -143,10 +143,10 @@ def _build_supervised_frame(featured_df):
     features = featured_df[[column for column in ADVANCED_FEATURE_COLUMNS if column in featured_df.columns]].copy()
     features = features.dropna(axis=1, how="all")
     features = features.ffill().bfill().fillna(0)
-    target = featured_df["Close"].shift(-1).rename("Target_Close")
-    target_dates = pd.Series(featured_df.index, index=featured_df.index).shift(-1)
-    supervised = features.join(target).dropna(subset=["Target_Close"])
-    supervised["Target_Date"] = target_dates.reindex(supervised.index)
+    supervised = features.copy()
+    supervised["Target_Close"] = featured_df["Close"].shift(-1).to_numpy()
+    supervised["Target_Date"] = pd.Series(featured_df.index).shift(-1).to_numpy()
+    supervised = supervised.dropna(subset=["Target_Close"])
     supervised = supervised.dropna(subset=["Target_Date"])
 
     return supervised
