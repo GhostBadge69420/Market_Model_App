@@ -84,6 +84,62 @@ def _safe_api_get(url, *, params=None, timeout=8):
     return response
 
 
+def _normalize_ohlcv_frame(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    normalized = df.copy()
+    if isinstance(normalized.columns, pd.MultiIndex):
+        normalized.columns = normalized.columns.get_level_values(0)
+
+    rename_map = {
+        "datetime": "Date",
+        "date": "Date",
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume",
+    }
+    normalized = normalized.rename(columns={column: rename_map.get(str(column).lower(), column) for column in normalized.columns})
+
+    if "Date" in normalized.columns:
+        normalized["Date"] = pd.to_datetime(normalized["Date"], errors="coerce")
+        normalized = normalized.dropna(subset=["Date"]).set_index("Date")
+
+    normalized.index = pd.to_datetime(normalized.index, errors="coerce")
+    normalized = normalized[normalized.index.notna()]
+
+    required_columns = ["Open", "High", "Low", "Close"]
+    if any(column not in normalized.columns for column in required_columns):
+        return pd.DataFrame()
+
+    if "Volume" not in normalized.columns:
+        normalized["Volume"] = 0
+
+    for column in ["Open", "High", "Low", "Close", "Volume"]:
+        normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
+
+    normalized = normalized.dropna(subset=required_columns)
+    normalized["Volume"] = normalized["Volume"].fillna(0)
+    return normalized.sort_index()
+
+
+def _normalize_fred_series(observations, index, *, pct_change=False):
+    frame = pd.DataFrame(observations or [])
+    if frame.empty or not {"date", "value"}.issubset(frame.columns):
+        return pd.Series(0, index=index)
+
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    frame["value"] = pd.to_numeric(frame["value"].replace(".", np.nan), errors="coerce")
+    series = frame.dropna(subset=["date"]).set_index("date")["value"].sort_index()
+
+    if pct_change:
+        series = series.pct_change()
+
+    return series.reindex(index).ffill().fillna(0)
+
+
 def _excel_column_to_index(cell_ref):
     letters = "".join(ch for ch in str(cell_ref) if ch.isalpha()).upper()
     total = 0
@@ -1286,8 +1342,7 @@ def build_custom_asset_summary(asset_key):
 def clean_symbol(symbol):
     symbol = str(symbol).strip()
 
-    # ONLY remove junk AFTER X
-    if "=X" in symbol:
+    if symbol.startswith("^") or "=X" in symbol:
         return symbol
 
     return symbol.split("^")[0].strip()
@@ -2173,37 +2228,22 @@ FRED_API_KEY = _get_required_secret("FRED_API_KEY")
 # ---------------- LIVE PRICE FUNCTION ----------------
 def get_live_price(symbol):
     symbol = _sanitize_market_symbol(symbol)
-    ticker = yf.Ticker(symbol)
 
-    try:
-        data = ticker.history(period="1d", interval="1m")
+    for price_fetcher in (_get_yfinance_price, get_twelve_price, get_alpha_price):
+        try:
+            price = price_fetcher(symbol)
+        except Exception:
+            price = None
 
-        if data.empty:
-            data = ticker.history(period="5d", interval="1d")
+        if price is not None and not pd.isna(price):
+            currency = "₹" if ".NS" in symbol or ".BO" in symbol else "$"
+            return float(price), currency
 
-        if data.empty:
-            return None
-
-        price = float(data["Close"].iloc[-1])
-
-        # Currency detection
-        if ".NS" in symbol or ".BO" in symbol:
-            currency = "₹"
-        elif "=X" in symbol:
-            currency = "$"
-        elif "-USD" in symbol:
-            currency = "$"
-        else:
-            currency = "$"
-
-        return price, currency
-    
-    except Exception:
-        return None
+    return None
     
 @st.cache_data(ttl=5)
 def cached_price(sym):
-        return get_live_price(sym)
+    return get_live_price(sym)
 
 # ---------------- Django API ----------------
 def fetch_news(symbol):
@@ -2232,6 +2272,10 @@ def get_cached_model_results(asset_key, source, year_label="All Years"):
         asset_df = _filter_data_by_financial_year(asset_df, year_label)
         return compare_history_models(asset_df, asset_key)
 
+    market_df = load_data(asset_key, source)
+    if market_df is not None and not market_df.empty:
+        return compare_history_models(market_df, asset_key)
+
     return compare_models(asset_key)
 
 
@@ -2253,10 +2297,48 @@ def get_twelve_price(symbol):
 
     return None
 
+
+def get_twelve_history(symbol, *, interval="1day", outputsize=180):
+    safe_symbol = _sanitize_market_symbol(symbol)
+    response = _safe_api_get(
+        "https://api.twelvedata.com/time_series",
+        params={
+            "symbol": safe_symbol,
+            "interval": interval,
+            "outputsize": outputsize,
+            "apikey": TWELVE_API_KEY,
+        },
+    )
+    data = response.json()
+    values = data.get("values")
+
+    if not values:
+        return pd.DataFrame()
+
+    return _normalize_ohlcv_frame(pd.DataFrame(values))
+
+
+def _get_yfinance_price(symbol):
+    ticker = yf.Ticker(symbol)
+    data = ticker.history(period="1d", interval="1m")
+
+    if data.empty:
+        data = ticker.history(period="5d", interval="1d")
+
+    if data.empty or "Close" not in data.columns:
+        return None
+
+    return float(data["Close"].iloc[-1])
+
 # ---------------- MACRO / MARKET SIGNALS ----------------
 
 def get_sp500_returns(index):
+    fred_series = get_fred_series("SP500", index, pct_change=True)
+    if not fred_series.empty and fred_series.abs().sum() > 0:
+        return fred_series
+
     df = yf.download("^GSPC", period="1y", interval="1d", progress=False)
+    df = _normalize_ohlcv_frame(df)
     if df.empty:
         return pd.Series(0, index=index)
 
@@ -2265,7 +2347,12 @@ def get_sp500_returns(index):
 
 
 def get_vix(index):
+    fred_series = get_fred_series("VIXCLS", index)
+    if not fred_series.empty and fred_series.abs().sum() > 0:
+        return fred_series
+
     df = yf.download("^VIX", period="1y", interval="1d", progress=False)
+    df = _normalize_ohlcv_frame(df)
     if df.empty:
         return pd.Series(0, index=index)
 
@@ -2274,7 +2361,12 @@ def get_vix(index):
 
 
 def get_tnx_yield(index):
+    fred_series = get_fred_series("DGS10", index)
+    if not fred_series.empty and fred_series.abs().sum() > 0:
+        return fred_series
+
     df = yf.download("^TNX", period="1y", interval="1d", progress=False)
+    df = _normalize_ohlcv_frame(df)
     if df.empty:
         return pd.Series(0, index=index)
 
@@ -2304,6 +2396,39 @@ def get_alpha_price(symbol):
 
     return None
 
+
+def get_alpha_history(symbol):
+    safe_symbol = _sanitize_market_symbol(symbol)
+    response = _safe_api_get(
+        "https://www.alphavantage.co/query",
+        params={
+            "function": "TIME_SERIES_DAILY_ADJUSTED",
+            "symbol": safe_symbol,
+            "outputsize": "compact",
+            "apikey": ALPHA_API_KEY,
+        },
+    )
+    data = response.json()
+    series = data.get("Time Series (Daily)")
+
+    if not series:
+        return pd.DataFrame()
+
+    rows = []
+    for date_label, values in series.items():
+        rows.append(
+            {
+                "Date": date_label,
+                "Open": values.get("1. open"),
+                "High": values.get("2. high"),
+                "Low": values.get("3. low"),
+                "Close": values.get("4. close"),
+                "Volume": values.get("6. volume"),
+            }
+        )
+
+    return _normalize_ohlcv_frame(pd.DataFrame(rows))
+
 # ---------------- FOREX LIVE DATA  ----------------
 def get_live_forex(symbol):
     try:
@@ -2318,7 +2443,7 @@ def get_live_forex(symbol):
         if df is None or df.empty:
             return pd.DataFrame()
 
-        return df
+        return _normalize_ohlcv_frame(df)
 
     except Exception:
         return pd.DataFrame()
@@ -2340,6 +2465,29 @@ def get_fred_data(series):
         return data["observations"][-1]["value"]
 
     return None
+
+
+def get_fred_series(series, index, *, pct_change=False):
+    safe_series = str(series).strip().upper()
+    if not SAFE_FRED_SERIES.fullmatch(safe_series):
+        return pd.Series(0, index=index)
+
+    try:
+        response = _safe_api_get(
+            "https://api.stlouisfed.org/fred/series/observations",
+            params={
+                "series_id": safe_series,
+                "api_key": FRED_API_KEY,
+                "file_type": "json",
+                "observation_start": str(pd.Timestamp(index.min()).date()),
+                "observation_end": str(pd.Timestamp(index.max()).date()),
+            },
+        )
+        data = response.json()
+    except Exception:
+        return pd.Series(0, index=index)
+
+    return _normalize_fred_series(data.get("observations", []), index, pct_change=pct_change)
 
 # -------------------- EQUITY ASSETS --------------------
 ASSETS = {
@@ -2489,20 +2637,30 @@ def load_data(asset_key, source):
     try:
         # FOREX FIX
         if "=X" in symbol:
-            return get_live_forex(symbol)
+            forex_df = get_live_forex(symbol)
+            if not forex_df.empty:
+                return forex_df
 
         df = yf.download(symbol, period="6mo", interval="1d", progress=False)
 
     except Exception:
-        return pd.DataFrame()
+        df = pd.DataFrame()
 
-    if df is None or df.empty:
-        return pd.DataFrame()
+    df = _normalize_ohlcv_frame(df)
+    if not df.empty:
+        return df
 
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
+    for fallback_loader in (get_twelve_history, get_alpha_history):
+        try:
+            fallback_df = fallback_loader(symbol)
+        except Exception:
+            fallback_df = pd.DataFrame()
 
-    return df
+        fallback_df = _normalize_ohlcv_frame(fallback_df)
+        if not fallback_df.empty:
+            return fallback_df
+
+    return pd.DataFrame()
 
 # -------------------- INDICATORS --------------------
 
